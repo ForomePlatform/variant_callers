@@ -19,7 +19,7 @@ class ABDenovoCaller(ABCaller):
         return ()
 
     def get_tag(self):
-        return "BGM_DE_NOVO"
+        return "MY_BGM_DE_NOVO"
 
     def get_type(self):
         return "Flag"

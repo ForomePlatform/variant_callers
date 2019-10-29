@@ -1,7 +1,8 @@
 import argparse
+import os
 
 import vcf as pyvcf
-from typing import Dict, Set
+from typing import Dict, Set, List
 
 from callers.ab_denovo_caller import ABDenovoCaller
 from utils.case_utils import parse_fam_file
@@ -10,20 +11,29 @@ HEADER_FILE_NAME = "new_calls_header.vcf"
 CALLS_FILE_NAME = "new_calls.tsv"
 LIMIT = 10000
 
+
+def execute(cmd):
+    print (cmd) 
+    os.system(cmd)
+
 class Harness():
     def __init__(self, vcf_file: str, family: Dict, callers: Set, flush = None) -> None:
         super().__init__()
-        self.vcf_reader = pyvcf.Reader(filename=vcf_file)
+        self.input_vcf = vcf_file
+        self.vcf_reader = pyvcf.Reader(filename=self.input_vcf)
         self.family = family
         self.calls = dict()
         self.callers = callers
         if flush is not None and not flush:
             flush = CALLS_FILE_NAME
         self.calls_file = flush
+        self.calls_file_open = False
         if self.calls_file:
-            self.open_calls(self.calls_file)
+            self.open_calls()
+            self.calls_file_open = True
 
         self.ready = False
+        self.header_file = None
 
     def run(self):
         for record in self.vcf_reader:
@@ -38,17 +48,16 @@ class Harness():
                 if (call):
                     tag = caller.get_tag()
                     if (caller.get_n()):
-                        calls[tag]="{}={}".format(call[0], call[1])
+                        calls[tag]=call[1]
                     else:
-                        calls[tag] = call[0]
+                        calls[tag] = "1"
             if not calls:
                 continue
             chromosome = record.CHROM
             pos = record.POS
             self.calls[(chromosome, pos)] = calls
             if len(self.calls) > LIMIT:
-                self.flush_calls(self.calls_file)
-                self.calls.clear()
+                self.flush_calls()
 
     def get_calls(self):
         return self.calls
@@ -60,27 +69,46 @@ class Harness():
             for caller in self.callers:
                 header_line = caller.get_header()
                 header.write(header_line + '\n')
+        self.header_file = file_name
 
-    def open_calls(self, file_name):
-        tags = sorted({caller.get_tag() for caller in self.callers})
-        with open(file_name, "w") as f:
+    def get_tags(self) -> List:
+        return sorted({caller.get_tag() for caller in self.callers})
+
+    def open_calls(self):
+        tags = self.get_tags()
+        with open(self.calls_file, "w") as f:
             f.write("# CHROM\tPOS\t{}\n".format('\t'.join(tags)))
+        self.calls_file_open = True
 
     def write_calls(self, file_name = None):
-        if file_name is None:
-            file_name = CALLS_FILE_NAME
-        self.open_calls(file_name)
-        self.flush_calls(file_name)
+        if file_name:
+            self.calls_file = file_name
+        elif not self.calls_file:
+            self.calls_file = CALLS_FILE_NAME
+        self.open_calls()
+        self.flush_calls()
 
-    def flush_calls(self, file_name):
-        tags = sorted({caller.get_tag() for caller in self.callers})
-        with open(file_name, "w") as f:
-            f.write("# CHROM\tPOS\t{}\n".format('\t'.join(tags)))
+    def flush_calls(self):
+        if not self.calls_file_open:
+            self.open_calls()
+        tags = self.get_tags()
+        with open(self.calls_file, "a") as f:
             for key in self.calls:
                 calls = self.calls[key]
                 p = [str(k) for k in key]
                 line = '\t'.join(p + [calls.get(tag, "") for tag in tags])
                 f.write(line + '\n')
+        self.calls.clear()
+
+    def apply_calls(self, output_file):
+        self.flush_calls()
+        tags = self.get_tags()
+        
+        execute("bgzip -f {}".format(self.calls_file))
+        execute("tabix -s1 -b2 -e2 -f {}.gz".format(self.calls_file))
+        columns = ','.join(["CHROM","POS"] + tags)
+        execute("bcftools annotate -a {}.gz -h {} -c {} -o {} {}".
+                  format(self.calls_file, self.header_file, columns, output_file, self.input_vcf))
 
 
 if __name__ == '__main__':
@@ -95,11 +123,12 @@ if __name__ == '__main__':
 
     family = parse_fam_file(fam_file)
 
-    callers = {ABDenovoCaller(recall_genotypes=False)}
+    callers = {ABDenovoCaller(recall_genotypes=True)}
 
     harness = Harness(vcf_file, family, callers)
     harness.write_header()
     harness.run()
     harness.write_calls()
+    harness.apply_calls("xx.vcf")
 
     print("All Done")
