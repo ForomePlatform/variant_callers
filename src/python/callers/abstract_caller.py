@@ -48,7 +48,7 @@ class AbstractCaller():
         return ()
 
     def get_tag(self):
-        return __class__
+        return "FOR"
 
     def get_type(self):
         return "String"

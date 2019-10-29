@@ -46,7 +46,7 @@ class ABDenovoCaller(ABCaller):
         return ()
 
     def get_tag(self):
-        return "MY_BGM_DE_NOVO"
+        return super(ABDenovoCaller, self).get_tag() + "_DE_NOVO"
 
     def get_type(self):
         return "Flag"
