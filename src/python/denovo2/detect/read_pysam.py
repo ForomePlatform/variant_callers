@@ -15,21 +15,27 @@
 import pysam, json
 from glob import glob
 import numpy as np
+from typing import List
 
-from adlib.ad_lib import AD_LibReader
+from denovo2.adlib.ad_lib import AD_LibReader
 #========================================
 class PysamList:
-    def __init__(self, list_of_filenames):
+    def __init__(self, file_with_list_of_filenames:str=None,
+                 list_of_bams:List = None):
         self.mSamFiles = []
-        with open(list_of_filenames, "r") as inp:
-            for line in inp:
-                filename = line.partition('#')[0].strip()
-                if not filename:
-                    continue
-                samfile = pysam.AlignmentFile(filename, "rb")
-                print("Load pysam file:", filename, "\n",
-                    samfile.check_index())
-                self.mSamFiles.append(samfile)
+        if (file_with_list_of_filenames):
+            list_of_bams = []
+            with open(file_with_list_of_filenames, "r") as inp:
+                for line in inp:
+                    filename = line.partition('#')[0].strip()
+                    if not filename:
+                        continue
+                list_of_bams.append(filename)
+        for filename in list_of_bams:
+            samfile = pysam.AlignmentFile(filename, "rb")
+            print("Load pysam file:", filename, "\n",
+                samfile.check_index())
+            self.mSamFiles.append(samfile)
 
     def mineAD(self, variant):
         ADfs, ADrs = [], []

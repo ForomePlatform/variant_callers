@@ -34,6 +34,7 @@ from typing import Dict, Set, List
 from callers.ab_compound_het_caller import ABCompoundHeterozygousCaller
 from callers.ab_denovo_caller import ABDenovoCaller
 from callers.ab_homo_rec_caller import ABHomozygousRecessiveCaller
+from callers.bayes_denovo_caller import BayesDenovoCaller
 from utils.case_utils import parse_fam_file
 
 HEADER_FILE_NAME = "new_calls_header.vcf"
@@ -70,16 +71,12 @@ class Harness():
                 for caller in self.callers:
                     samples = {s.sample for s in record.samples}
                     caller.init(self.family, samples)
+                self.ready = True
 
             calls = dict()
             for caller in self.callers:
                 call = caller.make_call(record)
-                if (call):
-                    tag = caller.get_tag()
-                    if (caller.get_n()):
-                        calls[tag]=call[1]
-                    else:
-                        calls[tag] = "1"
+                calls.update(call)
             if not calls:
                 continue
             chromosome = record.CHROM
@@ -101,7 +98,10 @@ class Harness():
         self.header_file = file_name
 
     def get_tags(self) -> List:
-        return sorted({caller.get_tag() for caller in self.callers})
+        tags = []
+        for caller in self.callers:
+            tags.extend(caller.get_all_tags())
+        return sorted(tags)
 
     def open_calls(self):
         tags = self.get_tags()
@@ -123,7 +123,7 @@ class Harness():
         tags = self.get_tags()
         with open(self.calls_file, "a") as f:
             for key in self.calls:
-                calls = self.calls[key]
+                calls = {tag: v if v != None else "1" for tag, v in self.calls[key].items()}
                 p = [str(k) for k in key]
                 line = '\t'.join(p + [calls.get(tag, ".") for tag in tags])
                 f.write(line + '\n')
@@ -144,6 +144,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Run BGM variant callers")
     parser.add_argument("-i", "--input", "--vcf", dest = "vcf", help="Input VCF file", required=True)
     parser.add_argument("-f", "--family", help="Family (fam) file", required=True)
+    parser.add_argument("--results", help="Results directory", required=False)
+    parser.add_argument("--dnlib", help="Path to De-Novo library", required=False)
     args = parser.parse_args()
     print (args)
 
@@ -151,9 +153,13 @@ if __name__ == '__main__':
     fam_file = args.family
 
     family = parse_fam_file(fam_file)
+    if (args.dnlib):
+        denovo_caller = BayesDenovoCaller(ABDenovoCaller(), args.results, args.dnlib)
+    else:
+        denovo_caller = ABDenovoCaller()
 
     callers = {
-        ABDenovoCaller(),
+        denovo_caller,
         ABCompoundHeterozygousCaller(),
         ABHomozygousRecessiveCaller()
     }

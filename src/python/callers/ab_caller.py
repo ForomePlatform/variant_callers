@@ -27,9 +27,9 @@
 from abc import abstractmethod
 from typing import Dict, Set, Tuple, List
 import vcf as pyvcf
+from vcf.model import _Record
 
 from .abstract_caller import AbstractCaller
-
 
 
 class ABCaller(AbstractCaller):
@@ -38,27 +38,36 @@ class ABCaller(AbstractCaller):
     def __init__(self, recall_genotypes: bool):
         super().__init__()
         self.recall_genotypes = recall_genotypes
+        self.genotypes = None
 
-    def make_call(self, record: pyvcf.Reader) -> Tuple:
+    def make_call(self, record: _Record) -> Dict:
+        self.genotypes = None
         genotypes = self.get_genotypes(record)
         if (not self.validate(genotypes)):
-            return ()
+            return {}
         a = self.affected(genotypes)
         u = self.unaffected(genotypes)
-        return self.check_genotypes(a, u)
+        result = self.check_genotypes(a, u)
+        if len(result) > 1:
+            return {result[0]: result[1]}
+        if result:
+            return {result[0]: None}
+        return {}
 
     @abstractmethod
     def check_genotypes(self, a: List, u: List) -> Tuple:
         pass
 
-    def get_genotypes(self, record: pyvcf.Reader):
+    def get_genotypes(self, record: _Record):
+        if self.genotypes:
+            return self.genotypes
         if not self.recall_genotypes:
-            return {s.sample: s.gt_type for s in record.samples}
+            self.genotypes = {s.sample: s.gt_type for s in record.samples}
+            return self.genotypes
 
-        genotypes = dict()
+        self.genotypes = dict()
         for sample in record.samples:
             gt = sample.gt_type
-            ad = None
             ad = getattr(sample.data, 'AD', None)
             if ad:
                 n_ref = ad[0]
@@ -71,8 +80,8 @@ class ABCaller(AbstractCaller):
                         gt = 1
                     else:
                         gt = 2
-            genotypes[sample.sample] = gt
-        return genotypes
+            self.genotypes[sample.sample] = gt
+        return self.genotypes
 
     def get_af(self, genotypes: Dict):
         unrelated_gts = [

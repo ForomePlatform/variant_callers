@@ -27,7 +27,7 @@
 
 from abc import ABC, abstractmethod
 from typing import Dict, Set, Tuple, List
-import vcf as pyvcf
+from vcf.model import _Record
 
 
 class AbstractCaller(ABC):
@@ -46,11 +46,14 @@ class AbstractCaller(ABC):
         return
 
     @abstractmethod
-    def make_call(self, record: pyvcf.Reader) -> Tuple:
-        return ()
+    def make_call(self, record: _Record) -> Dict:
+        return {}
 
-    def get_tag(self):
+    def get_my_tag(self):
         return "FOR"
+
+    def get_all_tags(self):
+        return [self.get_my_tag()]
 
     def get_type(self):
         return "String"
@@ -61,13 +64,20 @@ class AbstractCaller(ABC):
             return 0
         return 1
 
+    def get_trio(self):
+        for sample in self.family:
+            s = self.family[sample]
+            if (s["proband"]):
+                return [s["mother"], s["father"], s["id"]]
+        return None
+
     @abstractmethod
     def get_description(self):
         return ""
 
     def get_header(self):
         pattern = '##INFO=<ID={tag},Number={n},Type={type},Description="{desc}">'
-        return pattern.format(tag=self.get_tag(), type=self.get_type(),
+        return pattern.format(tag=self.get_my_tag(), type=self.get_type(),
                               n=self.get_n(), desc=self.get_description())
 
     @staticmethod

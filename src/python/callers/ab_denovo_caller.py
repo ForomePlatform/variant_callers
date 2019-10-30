@@ -26,7 +26,6 @@
 #  limitations under the License.
 
 from typing import Dict, Set, Tuple, List
-import vcf as pyvcf
 
 from .ab_caller import ABCaller
 
@@ -37,11 +36,11 @@ class ABDenovoCaller(ABCaller):
 
     def check_genotypes(self, a: List, u: List) -> Tuple:
         if (all([g > 0 for g in a]) and sum(u) == 0):
-            return (self.get_tag(), None)
+            return (self.get_my_tag(), None)
         return ()
 
-    def get_tag(self):
-        return super(ABDenovoCaller, self).get_tag() + "_DE_NOVO"
+    def get_my_tag(self):
+        return super(ABDenovoCaller, self).get_my_tag() + "_DE_NOVO"
 
     def get_type(self):
         return "Flag"

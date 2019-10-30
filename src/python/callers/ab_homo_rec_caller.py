@@ -48,11 +48,11 @@ class ABHomozygousRecessiveCaller(ABCaller):
 
     def check_genotypes(self, a: List, u: List) -> Tuple:
         if (all([g == 2 for g in a]) and all([g < 2 for g in u])):
-            return (self.get_tag(), None)
+            return (self.get_my_tag(), None)
         return ()
 
-    def get_tag(self):
-        return super(ABHomozygousRecessiveCaller, self).get_tag() + "_HOM_REC"
+    def get_my_tag(self):
+        return super(ABHomozygousRecessiveCaller, self).get_my_tag() + "_HOM_REC"
 
     def get_type(self):
         return "Flag"

@@ -63,11 +63,11 @@ class ABCompoundHeterozygousCaller(ABCaller):
             return ()
         value = sum(1 << i for i, gt in enumerate(u) if gt > 0)
         if (value):
-            return (self.get_tag(), str(value))
+            return (self.get_my_tag(), str(value))
         return ()
 
-    def get_tag(self):
-        return super(ABCompoundHeterozygousCaller, self).get_tag() + "_CMPD_HET"
+    def get_my_tag(self):
+        return super(ABCompoundHeterozygousCaller, self).get_my_tag() + "_CMPD_HET"
 
     def get_type(self):
         return "Integer"

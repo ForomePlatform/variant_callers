@@ -121,9 +121,10 @@ class VariantHandler:
 
 #========================================
 class DenovoDetector:
-    def __init__(self,  unrelated_dir,  trio_filename,  
-            dump_filename = None,  mdl_file = None):
-        self.mTrioSamFiles = PysamList(trio_filename)
+    def __init__(self, unrelated_dir, trio_filename=None, trio_list=None,
+                 dump_filename=None, mdl_file=None):
+        self.mTrioSamFiles = PysamList(file_with_list_of_filenames=trio_filename,
+                                       list_of_bams=trio_list)
         self.mUnrelLib = None
         self.mDumpFName = dump_filename
         if unrelated_dir is not None:
@@ -151,8 +152,8 @@ class DenovoDetector:
 #========================================
 def runner(outfilename, initial_filename, unrelated_dir, mdl_file,
         trio_filename, dump_filename):
-    detector = DenovoDetector(unrelated_dir,  trio_filename, 
-        dump_filename,  mdl_file)
+    detector = DenovoDetector(unrelated_dir, trio_filename,
+                              dump_filename=dump_filename, mdl_file=mdl_file)
             
     variants = VariantHandler.loadFile(initial_filename)
 

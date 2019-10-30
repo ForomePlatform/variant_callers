@@ -14,7 +14,7 @@
 
 import numpy as np
 from .algorithm import RhoModel, EM_full, evalAF, evalPP, normLogMatr
-from adlib.mdl_io import MDL_Reader
+from denovo2.adlib.mdl_io import MDL_Reader
 
 #========================================
 class DeNovo_Model:
