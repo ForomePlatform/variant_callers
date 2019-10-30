@@ -62,13 +62,14 @@ if sys.argv[1] == "random":
     cnt = 0
     cnt_bad = 0
     while True:
-        lib_portions = lib_rd._directReadPortions()
-        if lib_portions is None:
+        portion_info = lib_rd._nextPortions()
+        if portion_info is None:
             break
         cnt += 1
         if cnt % 100 == 0:
             print("Checked %d portions" % cnt,  file = sys.stderr)
             sys.stderr.flush()
+        lib_portions = lib_rd._getCurPortions()
         if any([portion.isComplex() for portion in lib_portions]):
             test_n = 50
             print("Complex portion", cnt, file = sys.stderr)

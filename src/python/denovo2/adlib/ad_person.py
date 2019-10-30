@@ -43,6 +43,10 @@ class AD_Portion:
     def getSize(self):
         return self.mSize
 
+    def getInfo(self):
+        return (self.mChunks[0].getChrom(), self.mChunks[0].getShift(),
+            self.mChunks[0].getShift() + self.mSize)
+
     def isOf(self, chrom, pos):
         if self.getChrom() == chrom:
             for chunk in self.mChunks:
@@ -110,7 +114,7 @@ class AD_PortionChunk:
 #========================================
 class AD_PersonData:
     PREFIX = b"#SeqBlockAD\n"
-    
+
     def __init__(self, fname, mine_mode = False):
         self.mFName = fname
         self.mInput = open(fname, 'rb')

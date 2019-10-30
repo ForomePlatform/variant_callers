@@ -69,6 +69,11 @@ Test/debug stuff
 * Run prev/pysam_prac_.py (to compare with original previous algorithm):
 > python2 -W ignore prev/pysam_prac_.py -I /wgs/data/old_cases/bgm0363_wgs/de_novo_stage1_output.txt -U ./lib_dump_0363.js -T /wgs/data/old_cases/bgm0363_wgs/case_bams_.txt -O st2_o_0363.out
 
+* Build tiny test mdl-ad file
+python3 -u -m detect.collect_mdl --test /data/model_output/denovo/idxlib qq.admd
+
+* Build whole test mdl-ad file (too long with whole lib data) 
+python3 -u -m detect.collect_mdl /data/model_output/denovo/idxlib result.admd
 ======================================
 Unclean files/side stories
 

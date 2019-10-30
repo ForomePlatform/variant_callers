@@ -45,7 +45,7 @@ class AD_LibReader:
         self.mInput.close()
         self.mInput = None
 
-    def _directReadPortions(self):
+    def _nextPortions(self):
         if self.mCurTabIdx is None:
             self.mCurTabIdx = 0
         else:
@@ -53,6 +53,9 @@ class AD_LibReader:
             if self.mCurTabIdx >= len(self.mTab):
                 return None
         self._setupPortions()
+        return self.mCurPortions[0].getInfo()
+
+    def _getCurPortions(self):
         return self.mCurPortions
 
     def _setupPortions(self):

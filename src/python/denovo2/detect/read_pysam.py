@@ -16,7 +16,7 @@ import pysam, json
 from glob import glob
 import numpy as np
 
-from ..adlib.ad_lib import AD_LibReader
+from adlib.ad_lib import AD_LibReader
 #========================================
 class PysamList:
     def __init__(self, list_of_filenames):
@@ -32,8 +32,6 @@ class PysamList:
                 self.mSamFiles.append(samfile)
 
     def mineAD(self, variant):
-        if (len(variant.getRef()), len(variant.getAlt())) != (1, 1):
-            return None, None
         ADfs, ADrs = [], []
         for samfile in self.mSamFiles:
             ADf, ADr = mineAD_ord(samfile, variant)
@@ -89,20 +87,17 @@ def mineAD_ord(samfile, variant):
 
 #========================================
 class AD_LibCollection:
-    def __init__(self, lib_dir, dump_file):
+    def __init__(self, lib_dir, dump_file = None):
         self.mLibSeq = []
         for fname in sorted(list(glob(lib_dir + "/*.ldx"))):
             self.mLibSeq.append(AD_LibReader(fname))
         self.mDumpFile = dump_file
         self.mDumpDict = dict()
 
+    def _nextPortions(self):
+        return self.mLibSeq[0]._nextPortions()
+
     def mineAD(self, variant):
-        if (len(variant.getRef()), len(variant.getAlt())) != (1, 1):
-            if self.mDumpFile:
-                key = "%d/%d" % (variant.getChromNum(), variant.getPos())
-                if key not in self.mDumpDict:
-                    self.mDumpDict[key] = [[[0., 0.]], [[0., 0.]]]
-            return None, None
         ADfs, ADrs = [], []
         for lib in self.mLibSeq:
             seq = lib.getAD_seq(variant.getChromNum(), variant.getPos())

@@ -14,7 +14,6 @@
 
 import array, bz2
 from io import BytesIO
-from .ad_person import AD_Portion
 
 #========================================
 class AD_LibBuilder:
@@ -103,14 +102,14 @@ if __name__=="__main__":
     while True:
         portions = []
         if inp_lib is not None:
-            lib_portions = inp_lib._directReadPortions()
-            if lib_portions is None:
+            portion_info = inp_lib._nextPortions()
+            if portion_info is None:
                 for inp_rd in inp_readers:
                     if inp_rd.directReadPortion() is not None:
                         print ("Extra portion in", inp_rd.getFName())
                         sys.exit()
                 break
-            portions += lib_portions
+            portions += inp_lib._getCurPortions()
         for inp_rd in inp_readers:
             portion = inp_rd.directReadPortion()
             if portion is None:
