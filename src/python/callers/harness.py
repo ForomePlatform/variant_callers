@@ -31,7 +31,9 @@ import os
 import vcf as pyvcf
 from typing import Dict, Set, List
 
+from callers.ab_compound_het_caller import ABCompoundHeterozygousCaller
 from callers.ab_denovo_caller import ABDenovoCaller
+from callers.ab_homo_rec_caller import ABHomozygousRecessiveCaller
 from utils.case_utils import parse_fam_file
 
 HEADER_FILE_NAME = "new_calls_header.vcf"
@@ -123,7 +125,7 @@ class Harness():
             for key in self.calls:
                 calls = self.calls[key]
                 p = [str(k) for k in key]
-                line = '\t'.join(p + [calls.get(tag, "") for tag in tags])
+                line = '\t'.join(p + [calls.get(tag, ".") for tag in tags])
                 f.write(line + '\n')
         self.calls.clear()
 
@@ -150,7 +152,11 @@ if __name__ == '__main__':
 
     family = parse_fam_file(fam_file)
 
-    callers = {ABDenovoCaller(recall_genotypes=True)}
+    callers = {
+        ABDenovoCaller(),
+        ABCompoundHeterozygousCaller(),
+        ABHomozygousRecessiveCaller()
+    }
 
     harness = Harness(vcf_file, family, callers)
     harness.write_header()

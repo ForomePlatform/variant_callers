@@ -25,11 +25,12 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+from abc import ABC, abstractmethod
 from typing import Dict, Set, Tuple, List
 import vcf as pyvcf
 
 
-class AbstractCaller():
+class AbstractCaller(ABC):
     def __init__(self):
         self.family = None
         self.samples = None
@@ -44,6 +45,7 @@ class AbstractCaller():
         self.unaffected_samples = [id for id in self.family if not self.family[id]['affected']]
         return
 
+    @abstractmethod
     def make_call(self, record: pyvcf.Reader) -> Tuple:
         return ()
 
@@ -59,6 +61,7 @@ class AbstractCaller():
             return 0
         return 1
 
+    @abstractmethod
     def get_description(self):
         return ""
 

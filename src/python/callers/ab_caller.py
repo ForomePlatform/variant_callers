@@ -24,8 +24,8 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-
-from typing import Dict, Set, Mapping
+from abc import abstractmethod
+from typing import Dict, Set, Tuple, List
 import vcf as pyvcf
 
 from .abstract_caller import AbstractCaller
@@ -38,6 +38,18 @@ class ABCaller(AbstractCaller):
     def __init__(self, recall_genotypes: bool):
         super().__init__()
         self.recall_genotypes = recall_genotypes
+
+    def make_call(self, record: pyvcf.Reader) -> Tuple:
+        genotypes = self.get_genotypes(record)
+        if (not self.validate(genotypes)):
+            return ()
+        a = self.affected(genotypes)
+        u = self.unaffected(genotypes)
+        return self.check_genotypes(a, u)
+
+    @abstractmethod
+    def check_genotypes(self, a: List, u: List) -> Tuple:
+        pass
 
     def get_genotypes(self, record: pyvcf.Reader):
         if not self.recall_genotypes:
@@ -74,7 +86,7 @@ class ABCaller(AbstractCaller):
     def validate(self, genotypes: Dict):
         return self.get_af(genotypes) < self.AF_THRESHOLD
 
-    def affected(self, genotypes: Dict):
+    def affected(self, genotypes: Dict) -> List:
         g = [genotypes[id] for id in self.affected_samples]
         return self.gt_to_int(g)
 
