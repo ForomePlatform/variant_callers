@@ -9,7 +9,7 @@ Currently implemented callers are:
 
 * De-Novo
 * Homozygous Recessive
-*- Compound Heterozygous
+* Compound Heterozygous
 
 **Bayesian Callers:**
 
