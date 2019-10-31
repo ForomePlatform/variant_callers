@@ -5,7 +5,7 @@ Collection of variant callers based on BGM AB (allele balance) and bayesian call
 This package includes a hraness to run BGM Rare Variant Callers. 
 Currently implemented callers are:
 
-**Allele Balance cCllers**:
+**Allele Balance Callers**:
 
 * De-Novo
 * Homozygous Recessive
