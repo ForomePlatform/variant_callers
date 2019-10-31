@@ -1,4 +1,10 @@
-#  Copyright (c) 2019. Sergey Trifonov, Michael Bouzinier
+#  Copyright (c) 2019. Partners HealthCare, Harvard Medical School’s
+#  Department of Biomedical Informatics, Sergey Trifonov
+#
+#  Developed by Sergey Trifonov and Michael Bouzinier, based on contributions by:
+#  Anwoy Kumar Mohanty, Andrew Bjonnes,
+#  Ignat Leshchiner, Shamil Sunyaev and other members of Division of Genetics,
+#  Brigham and Women's Hospital
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -11,6 +17,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+
 
 #========================================
 # Reads file (hg19.fasta) and represents 

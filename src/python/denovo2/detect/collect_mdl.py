@@ -1,4 +1,10 @@
-#  Copyright (c) 2019. Sergey Trifonov, Michael Bouzinier
+#  Copyright (c) 2019. Partners HealthCare, Harvard Medical School’s
+#  Department of Biomedical Informatics, Sergey Trifonov
+#
+#  Developed by Sergey Trifonov and Michael Bouzinier, based on contributions by:
+#  Anwoy Kumar Mohanty, Andrew Bjonnes,
+#  Ignat Leshchiner, Shamil Sunyaev and other members of Division of Genetics,
+#  Brigham and Women's Hospital
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -12,10 +18,11 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+
 import sys
 from datetime import datetime
 from .read_pysam import AD_LibCollection
-from adlib.mdl_io import MDL_Builder
+from denovo2.adlib.mdl_io import MDL_Builder
 from .dn_model import DeNovo_Model, DeNovo_MDL_Reader
 from .detect2 import VariantHandler
 
