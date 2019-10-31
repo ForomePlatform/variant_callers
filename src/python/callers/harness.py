@@ -13,33 +13,16 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 #
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
 
-import argparse
 import os
+import time
 
 import vcf as pyvcf
 from typing import Dict, Set, List
 
-from callers.ab_compound_het_caller import ABCompoundHeterozygousCaller
-from callers.ab_denovo_caller import ABDenovoCaller
-from callers.ab_homo_rec_caller import ABHomozygousRecessiveCaller
-from callers.bayes_denovo_caller import BayesDenovoCaller
-from utils.case_utils import parse_fam_file
-
 HEADER_FILE_NAME = "new_calls_header.vcf"
 CALLS_FILE_NAME = "new_calls.tsv"
-LIMIT = 10000
+LIMIT = 100
 
 
 def execute(cmd):
@@ -54,7 +37,7 @@ class Harness():
         self.family = family
         self.calls = dict()
         self.callers = callers
-        if flush is not None and not flush:
+        if flush and not isinstance(flush, str):
             flush = CALLS_FILE_NAME
         self.calls_file = flush
         self.calls_file_open = False
@@ -64,14 +47,19 @@ class Harness():
 
         self.ready = False
         self.header_file = None
+        self.variant_counter = 0
+        self.call_counter = 0
+        self.variant_called = 0
 
     def run(self):
+        t0 = time.time()
         for record in self.vcf_reader:
             if not self.ready:
                 for caller in self.callers:
                     samples = {s.sample for s in record.samples}
                     caller.init(self.family, samples)
                 self.ready = True
+            self.variant_counter += 1
 
             calls = dict()
             for caller in self.callers:
@@ -82,8 +70,13 @@ class Harness():
             chromosome = record.CHROM
             pos = record.POS
             self.calls[(chromosome, pos)] = calls
-            if len(self.calls) > LIMIT:
+            self.call_counter += len(calls)
+            self.variant_called += 1
+            if self.calls_file_open and len(self.calls) > LIMIT:
                 self.flush_calls()
+                print("Processed {:d} variants, flushed {:d} calls".
+                      format(self.variant_counter, self.call_counter))
+        return (time.time() - t0)
 
     def get_calls(self):
         return self.calls
@@ -140,34 +133,3 @@ class Harness():
                   format(self.calls_file, self.header_file, columns, output_file, self.input_vcf))
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Run BGM variant callers")
-    parser.add_argument("-i", "--input", "--vcf", dest = "vcf", help="Input VCF file", required=True)
-    parser.add_argument("-f", "--family", help="Family (fam) file", required=True)
-    parser.add_argument("--results", help="Results directory", required=False)
-    parser.add_argument("--dnlib", help="Path to De-Novo library", required=False)
-    args = parser.parse_args()
-    print (args)
-
-    vcf_file = args.vcf
-    fam_file = args.family
-
-    family = parse_fam_file(fam_file)
-    if (args.dnlib):
-        denovo_caller = BayesDenovoCaller(ABDenovoCaller(), args.results, args.dnlib)
-    else:
-        denovo_caller = ABDenovoCaller()
-
-    callers = {
-        denovo_caller,
-        ABCompoundHeterozygousCaller(),
-        ABHomozygousRecessiveCaller()
-    }
-
-    harness = Harness(vcf_file, family, callers)
-    harness.write_header()
-    harness.run()
-    harness.write_calls()
-    harness.apply_calls("xx.vcf")
-
-    print("All Done")

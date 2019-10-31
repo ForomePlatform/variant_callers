@@ -1,7 +1,4 @@
 certifi
-mkl-fft
-mkl-random
-mkl-service
 numpy
 pysam
 PyVCF
