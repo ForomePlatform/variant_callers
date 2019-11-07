@@ -25,6 +25,7 @@ from callers.ab_denovo_caller import ABDenovoCaller
 from callers.ab_homo_rec_caller import ABHomozygousRecessiveCaller
 from callers.bayes_denovo_caller import BayesDenovoCaller
 from callers.harness import Harness
+from callers.tag_caller import TagCaller
 from utils.case_utils import parse_fam_file
 
 
@@ -33,16 +34,31 @@ def run (args):
     fam_file = args.family
 
     family = parse_fam_file(fam_file)
-    if (args.dnlib):
+
+    need_standard_de_novo = (not args.callers) or ("de-novo" in args.callers)
+
+    if (args.dnlib and need_standard_de_novo):
         denovo_caller = BayesDenovoCaller(ABDenovoCaller(), args.results, args.dnlib)
     else:
         denovo_caller = ABDenovoCaller()
 
-    callers = {
-        denovo_caller,
-        ABCompoundHeterozygousCaller(),
-        ABHomozygousRecessiveCaller()
-    }
+    if args.callers:
+        callers = set()
+        if "de-novo" in args.callers:
+            callers.add(denovo_caller)
+        elif "compound_het" in args.callers:
+            callers.add(ABCompoundHeterozygousCaller(),)
+        elif "homo-rec" in args.callers:
+            callers.add(ABHomozygousRecessiveCaller)
+        elif "de-novo2" in args.callers:
+            callers.add(BayesDenovoCaller(TagCaller("BGM_BAYES_DE_NOVO"),
+                        args.results, args.dnlib, include_parent_calls=False))
+    else:
+        callers = {
+            denovo_caller,
+            ABCompoundHeterozygousCaller(),
+            ABHomozygousRecessiveCaller()
+        }
 
     harness = Harness(vcf_file, family, callers, flush=True)
     harness.write_header()
@@ -75,6 +91,8 @@ if __name__ == '__main__':
             help="Path to De-Novo library. If specified, then Bayesian De-Novo "
                  "Caller is used, otherwise Allele Balance Caller",
             required=False)
+    parser.add_argument("--callers", nargs="*",
+                        help="List of callers if different from default")
     args = parser.parse_args()
     print(args)
 

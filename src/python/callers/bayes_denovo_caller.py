@@ -29,13 +29,14 @@ from utils.misc import raiseException
 
 class BayesDenovoCaller(AbstractCaller):
     def __init__(self, parent:ABCaller, path_to_bams:str, path_to_library:str,
-                 pp_threshold:float = 0.7):
+                 pp_threshold:float = 0.7, include_parent_calls:bool = True):
         super().__init__()
         self.parent = parent
         self.path_to_bams = path_to_bams
         self.path_to_library = path_to_library
         self.pp_threshold = pp_threshold
         self.detector = None
+        self.return_parent_calls = include_parent_calls
 
     def init(self, family: Dict, samples: Set):
         super(BayesDenovoCaller, self).init(family, samples)
@@ -54,7 +55,8 @@ class BayesDenovoCaller(AbstractCaller):
         parent_call = self.parent.make_call(record)
         if not parent_call:
             return result
-        result.update(parent_call)
+        if (self.return_parent_calls and self.parent.get_type()):
+            result.update(parent_call)
         chromosome = record.CHROM
         if not chromosome.startswith("chr"):
             chromosome = "chr" + chromosome
@@ -73,7 +75,9 @@ class BayesDenovoCaller(AbstractCaller):
         return super(BayesDenovoCaller, self).get_my_tag() + "_BAYES_DE_NOVO"
 
     def get_all_tags(self):
-        return [self.get_my_tag(), self.parent.get_my_tag()]
+        if (self.return_parent_calls):
+            return [self.get_my_tag(), self.parent.get_my_tag()]
+        return [self.get_my_tag()]
 
     def get_type(self):
         return "Float"
