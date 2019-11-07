@@ -86,9 +86,11 @@ class BayesDenovoCaller(AbstractCaller):
         return "Probability of de novo by BGM Bayes caller"
 
     def get_header(self):
-        h1 = super(BayesDenovoCaller, self).get_header()
-        h2 = self.parent.get_header()
-        return '\n'.join([h1, h2])
+        headers = []
+        headers.append(super(BayesDenovoCaller, self).get_header())
+        if (self.return_parent_calls):
+            headers.append(self.parent.get_header())
+        return '\n'.join(headers)
 
     def close(self):
         if (self.detector):
