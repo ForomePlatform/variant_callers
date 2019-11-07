@@ -64,6 +64,9 @@ class Harness():
                     caller.init(self.family, samples)
                 self.ready = True
             self.variant_counter += 1
+            if (self.variant_counter % 1000) == 0:
+                print("Processed {:d} variants, flushed {:d} calls".
+                      format(self.variant_counter, self.call_counter))
 
             calls = dict()
             for caller in self.callers:
