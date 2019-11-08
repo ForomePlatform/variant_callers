@@ -20,6 +20,7 @@
 
 import os
 import time
+from collections import OrderedDict
 
 import vcf as pyvcf
 from typing import Dict, Set, List
@@ -39,7 +40,7 @@ class Harness():
         self.input_vcf = vcf_file
         self.vcf_reader = pyvcf.Reader(filename=self.input_vcf)
         self.family = family
-        self.calls = dict()
+        self.calls = OrderedDict()
         self.callers = callers
         if flush and not isinstance(flush, str):
             flush = CALLS_FILE_NAME
@@ -68,21 +69,25 @@ class Harness():
                 print("Processed {:d} variants, flushed {:d} calls".
                       format(self.variant_counter, self.call_counter))
 
-            calls = dict()
-            for caller in self.callers:
-                call = caller.make_call(record)
-                calls.update(call)
-            if not calls:
-                continue
-            chromosome = record.CHROM
-            pos = record.POS
-            self.calls[(chromosome, pos)] = calls
-            self.call_counter += len(calls)
-            self.variant_called += 1
-            if self.calls_file_open and len(self.calls) > LIMIT:
-                self.flush_calls()
-                print("Processed {:d} variants, flushed {:d} calls".
-                      format(self.variant_counter, self.call_counter))
+            try:
+                calls = dict()
+                for caller in self.callers:
+                    call = caller.make_call(record)
+                    calls.update(call)
+                if not calls:
+                    continue
+                chromosome = record.CHROM
+                pos = record.POS
+                self.calls[(chromosome, pos)] = calls
+                self.call_counter += len(calls)
+                self.variant_called += 1
+                if self.calls_file_open and len(self.calls) > LIMIT:
+                    self.flush_calls()
+                    print("Processed {:d} variants, flushed {:d} calls".
+                          format(self.variant_counter, self.call_counter))
+            except Exception as e:
+                print("Error in {}: {}".format(record.CHROM, record.POS))
+                print(str(e))
         return (time.time() - t0)
 
     def get_calls(self):
