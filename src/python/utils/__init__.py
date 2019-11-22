@@ -1,3 +1,4 @@
+# coding=utf-8
 #  Copyright (c) 2019. Partners HealthCare, Harvard Medical School’s
 #  Department of Biomedical Informatics
 #
