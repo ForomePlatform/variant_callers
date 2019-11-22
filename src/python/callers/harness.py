@@ -22,8 +22,13 @@ import os
 import time
 from collections import OrderedDict
 
+import sortedcontainers
 import vcf as pyvcf
+from vcf.model import _Record
 from typing import Dict, Set, List
+
+from callers.ab_caller import ABCaller
+from callers.abstract_caller import AbstractCaller, VariantContext
 
 HEADER_FILE_NAME = "new_calls_header.vcf"
 CALLS_FILE_NAME = "new_calls.tsv"
@@ -55,14 +60,38 @@ class Harness():
         self.variant_counter = 0
         self.call_counter = 0
         self.variant_called = 0
+        self.use_context = True
+        self.shared_context = None
+
+    def update_calls(self, caller:AbstractCaller, all_calls: Dict, new_calls: Dict) -> None:
+        if (caller.get_n() > 0):
+            for c in new_calls:
+                value = new_calls[c]
+                if (c in all_calls):
+                    value = ','.join([all_calls[c], value])
+                all_calls[c] = value
+        else:
+            all_calls.update(new_calls)
+
+
+    def init_context(self, samples: List, record: _Record):
+        self.shared_context.reset()
+        genotypes = ABCaller.calculate_genotypes(record)
+        af = ABCaller.calculate_af(genotypes, samples)
+        self.shared_context["genotypes"] = genotypes
+        self.shared_context["af"] = af
 
     def run(self):
         t0 = time.time()
+        samples = []
         for record in self.vcf_reader:
             if not self.ready:
+                if self.use_context:
+                    self.shared_context = VariantContext()
                 for caller in self.callers:
                     samples = {s.sample for s in record.samples}
                     caller.init(self.family, samples)
+                    caller.set_shared_context(self.shared_context)
                 self.ready = True
             self.variant_counter += 1
             if (self.variant_counter % 10000) == 0:
@@ -70,10 +99,16 @@ class Harness():
                       format(self.variant_counter, self.call_counter))
 
             try:
+                if self.use_context:
+                    self.init_context(samples, record)
+                else:
+                    for caller in self.callers:
+                        caller.reset_context()
                 calls = dict()
                 for caller in self.callers:
                     call = caller.make_call(record)
-                    calls.update(call)
+                    if (call):
+                        self.update_calls(caller, calls, call)
                 if not calls:
                     continue
                 chromosome = record.CHROM
@@ -96,17 +131,21 @@ class Harness():
     def write_header(self, file_name = None):
         if file_name is None:
             file_name = HEADER_FILE_NAME
+        tags = set()
         with open(file_name, "w") as header:
             for caller in self.callers:
+                if len(set(caller.get_all_tags()) - tags) == 0:
+                    continue
+                tags.update(caller.get_all_tags())
                 header_line = caller.get_header()
                 header.write(header_line + '\n')
         self.header_file = file_name
 
-    def get_tags(self) -> List:
-        tags = []
+    def get_tags(self) -> sortedcontainers.SortedSet:
+        tags = sortedcontainers.SortedSet()
         for caller in self.callers:
-            tags.extend(caller.get_all_tags())
-        return sorted(tags)
+            tags.update(caller.get_all_tags())
+        return tags
 
     def open_calls(self):
         tags = self.get_tags()
