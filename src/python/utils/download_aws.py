@@ -28,7 +28,7 @@ from utils.case_utils import parse_all_fam_files, get_trios_for_family
 BUCKET = "udn-joint-calling"
 PREFIX = "cases/wes/"
 pattern = "{sample}.recal.realign.dedup.bam"
-patterns = [pattern + ".bai"]
+patterns = [pattern, pattern + ".bai"]
 
 
 def download_bams_for_trios(metadata:str, vcf_file:str, key:str, secret:str, dest:str):
@@ -59,7 +59,10 @@ def download_bams_for_trios(metadata:str, vcf_file:str, key:str, secret:str, des
         object_name = files[f]
         target = os.path.join(dest, f)
         print("Downloading: {} ==> {}".format(object_name, target))
-        s3.download_file(BUCKET, object_name, target)
+        try:
+            s3.download_file(BUCKET, object_name, target)
+        except Exception as e:
+            print("ERROR: " + str(e))
 
     print("All Done.")
 
