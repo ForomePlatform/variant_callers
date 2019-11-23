@@ -1,5 +1,5 @@
 #  Copyright (c) 2019. Partners HealthCare, Harvard Medical School’s
-#  Department of Biomedical Informatics
+#  Department of Biomedical Informatics, Sergey Trifonov
 #
 #  Developed by Sergey Trifonov and Michael Bouzinier, based on contributions by:
 #  Anwoy Kumar Mohanty, Andrew Bjonnes,
@@ -27,11 +27,12 @@ from denovo2.detect.detect2 import DenovoDetector, VariantHandler
 from utils.misc import raiseException
 
 
-class BayesDenovoCaller(AbstractCaller):
-    def __init__(self, parent:ABCaller, path_to_bams:str, path_to_library:str,
-                 pp_threshold:float = 0.7, include_parent_calls:bool = True):
+class JointDenovoCaller(AbstractCaller):
+    def __init__(self, families: Dict, path_to_bams: str,
+                 path_to_library: str,
+                 pp_threshold: float = 0.7, include_parent_calls: bool = True):
         super().__init__()
-        self.parent = parent
+        self.families = None
         self.path_to_bams = path_to_bams
         self.path_to_library = path_to_library
         self.pp_threshold = pp_threshold
@@ -39,11 +40,12 @@ class BayesDenovoCaller(AbstractCaller):
         self.return_parent_calls = include_parent_calls
 
     def init(self, family: Dict, samples: Set):
-        super(BayesDenovoCaller, self).init(family, samples)
+        super(JointDenovoCaller, self).init(family, samples)
         self.parent.init(family, samples)
         trio = self.get_trio()
         if (not trio):
-            raiseException("For {} family must contain a trio".format(self.get_my_tag()))
+            raiseException(
+                "For {} family must contain a trio".format(self.get_my_tag()))
         list_of_bam_files = [
             self.path_to_bams.format(sample) for sample in trio
         ]
@@ -72,25 +74,14 @@ class BayesDenovoCaller(AbstractCaller):
         return result
 
     def get_my_tag(self):
-        return super(BayesDenovoCaller, self).get_my_tag() + "_BAYES_DE_NOVO"
-
-    def get_all_tags(self):
-        if (self.return_parent_calls):
-            return [self.get_my_tag(), self.parent.get_my_tag()]
-        return [self.get_my_tag()]
+        #return super(JointDenovoCaller, self).get_my_tag() + "_BAYES_DE_NOVO"
+        return "BGM_BAYES_DE_NOVO"
 
     def get_type(self):
-        return "Float"
+        return "String"
 
     def get_description(self):
         return "Probability of de novo by BGM Bayes caller"
-
-    def get_header(self):
-        headers = []
-        headers.append(super(BayesDenovoCaller, self).get_header())
-        if (self.return_parent_calls):
-            headers.append(self.parent.get_header())
-        return '\n'.join(headers)
 
     def close(self):
         if (self.detector):

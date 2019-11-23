@@ -76,11 +76,36 @@ if __name__ == "__main__":
                 help="Path to collection of Family (fam) files, required",
                 required=True)
     parser.add_argument("--key", help="aws_access_key_id, required", required=True)
-    parser.add_argument("--secret", help="aws_secret_access_key, required", required=True)
-    parser.add_argument("--dest", help="Destination directory, required", required=True)
+    parser.add_argument("--secret", help="aws_secret_access_key, required", required=False)
+    parser.add_argument("--dest", help="Destination directory, required", required=False)
 
     args = parser.parse_args()
     print(args)
 
-    download_bams_for_trios(args.families, args.vcf, args.key, args.secret, args.dest)
+    if args.key:
+        key = args.key
+        secret = args.secret
+    else:
+        key = None
+        secret = None
+        configuration = "default"
+        section = '[' + configuration + ']'
+        with open('~/.aws/credentials') as credentials:
+            state = 1
+            for line in credentials:
+                if state == 1:
+                    if line.strip() == section:
+                        state = 2
+                    continue
+                if state == 2:
+                    text = line.strip()
+                    if text.startswith('['):
+                        state = 3
+                        break
+                    if "aws_access_key_id" in text:
+                        key = text.split('=')[1].strip()
+                    elif "aws_secret_access_key" in text:
+                        secret = text.split('=', 1)[1].strip()
+
+    download_bams_for_trios(args.families, args.vcf, key, secret, args.dest)
 
