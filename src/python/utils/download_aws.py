@@ -75,9 +75,9 @@ if __name__ == "__main__":
     parser.add_argument("-f", "--families",
                 help="Path to collection of Family (fam) files, required",
                 required=True)
-    parser.add_argument("--key", help="aws_access_key_id, required", required=True)
+    parser.add_argument("--key", help="aws_access_key_id, required", required=False)
     parser.add_argument("--secret", help="aws_secret_access_key, required", required=False)
-    parser.add_argument("--dest", help="Destination directory, required", required=False)
+    parser.add_argument("--dest", help="Destination directory, required", required=True)
 
     args = parser.parse_args()
     print(args)
