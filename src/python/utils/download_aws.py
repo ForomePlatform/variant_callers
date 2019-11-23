@@ -90,7 +90,8 @@ if __name__ == "__main__":
         secret = None
         configuration = "default"
         section = '[' + configuration + ']'
-        with open('~/.aws/credentials') as credentials:
+        f = os.path.join(os.path.expanduser('~'), ".aws", "credentials")
+        with open(f) as credentials:
             state = 1
             for line in credentials:
                 if state == 1:
