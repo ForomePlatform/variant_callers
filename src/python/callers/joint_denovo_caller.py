@@ -17,61 +17,112 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-
+import os
 from typing import Dict, Set, Tuple, List
 from vcf.model import _Record
 
-from callers.ab_caller import ABCaller
+from callers.ab_denovo_caller import ABDenovoCaller
 from callers.abstract_caller import AbstractCaller
 from denovo2.detect.detect2 import DenovoDetector, VariantHandler
 from utils.misc import raiseException
+import sortedcontainers
+import vcf as pyvcf
+
+from utils.case_utils import parse_all_fam_files, get_trios_for_family, get_bam_patterns
+
+class LocalCaller:
+    def __init__(self, proband:str, caller: ABDenovoCaller, detector: DenovoDetector) -> None:
+        super().__init__()
+        self.proband = proband
+        self.parent_caller = caller
+        self.detector = detector
 
 
 class JointDenovoCaller(AbstractCaller):
-    def __init__(self, families: Dict, path_to_bams: str,
+    def __init__(self, f_metadata:str, vcf_file:str, path_to_bams: str,
                  path_to_library: str,
-                 pp_threshold: float = 0.7, include_parent_calls: bool = True):
+                 pp_threshold: float = 0.7, bayesian: bool = True):
         super().__init__()
-        self.families = None
+        self.local_callers = dict()
         self.path_to_bams = path_to_bams
         self.path_to_library = path_to_library
         self.pp_threshold = pp_threshold
-        self.detector = None
-        self.return_parent_calls = include_parent_calls
+        self.bayesian = bayesian
+        self.format = "{sample}:{pp:1.2f}"
+        self.check_families(f_metadata, vcf_file)
 
-    def init(self, family: Dict, samples: Set):
-        super(JointDenovoCaller, self).init(family, samples)
-        self.parent.init(family, samples)
-        trio = self.get_trio()
-        if (not trio):
-            raiseException(
-                "For {} family must contain a trio".format(self.get_my_tag()))
-        list_of_bam_files = [
-            self.path_to_bams.format(sample) for sample in trio
-        ]
-        self.detector = DenovoDetector(self.path_to_library,
-                                       trio_list=list_of_bam_files)
+    def check_families(self, f_metadata:str, vcf_file:str):
+        self.local_callers = sortedcontainers.SortedDict()
+        families = parse_all_fam_files(f_metadata)
+        vcf_reader = pyvcf.Reader(filename=vcf_file)
+        patterns = get_bam_patterns()
+        if self.bayesian:
+            bam_pattern = os.path.join(self.path_to_bams, patterns[0])
+        samples = {s for s in vcf_reader.samples}
+
+        for name in families:
+            family = families[name]
+            if not all([s in samples for s in family]):
+                continue
+            trios = get_trios_for_family(family)
+            for proband in trios:
+                trio = trios[proband]
+                if self.bayesian:
+                    list_of_bam_files = [
+                        bam_pattern.format(sample=sample) for sample in trio
+                    ]
+                    if not all (os.path.exists(bam) for bam in list_of_bam_files):
+                        continue
+                    detector = DenovoDetector(self.path_to_library,
+                                    trio_list=list_of_bam_files)
+                else:
+                    detector = None
+                ab_caller = ABDenovoCaller()
+                ab_caller.set_shared_context(self.variant_context)
+                ab_caller.init(family, samples)
+                local_caller = LocalCaller(proband, ab_caller, detector)
+                self.local_callers[proband] = local_caller
+        return
+
+    def init(self, families: Dict, samples: Set):
+        return
 
     def make_call(self, record: _Record) -> Dict:
-        result = dict()
-        parent_call = self.parent.make_call(record)
-        if not parent_call:
-            return result
-        if (self.return_parent_calls and self.parent.get_type()):
-            result.update(parent_call)
+        result = []
+
+        self.variant_context.reset()
+        samples = {s.sample for s in record.samples}
+        genotypes = ABDenovoCaller.calculate_genotypes(record)
+        af = ABDenovoCaller.calculate_af(genotypes, samples)
         chromosome = record.CHROM
         if not chromosome.startswith("chr"):
             chromosome = "chr" + chromosome
         pos = record.POS
-        genotypes = self.parent.get_genotypes(record)
-        af = self.parent.get_af(genotypes)
-        variant = VariantHandler(chromosome, pos, record.REF, record.ALT, af)
-        passed = self.detector.detect(variant)
-        if (passed):
-            pp = variant.getProp("PP")
-            if (pp > self.pp_threshold):
-                result[self.get_my_tag()] = str(pp)
-        return result
+        self.variant_context["genotypes"] = genotypes
+        self.variant_context["af"] = af
+
+        for proband in self.local_callers:
+            caller = self.local_callers[proband]
+            parent_call = caller.parent_caller.make_call(record)
+            if not parent_call:
+                continue
+
+            value = None
+            if self.bayesian:
+                variant = VariantHandler(chromosome, pos, record.REF, record.ALT, af)
+                passed = caller.detector.detect(variant)
+                if (passed):
+                    pp = variant.getProp("PP")
+                    if (pp > self.pp_threshold):
+                        value = self.format.format(sample=proband, pp=pp)
+            else:
+                value = self.format.format(sample=proband, pp=1 - af)
+            if (value != None):
+                result.append(value)
+
+        if result:
+            return {self.get_my_tag(): ','.join(result)}
+        return dict()
 
     def get_my_tag(self):
         #return super(JointDenovoCaller, self).get_my_tag() + "_BAYES_DE_NOVO"
@@ -84,6 +135,7 @@ class JointDenovoCaller(AbstractCaller):
         return "Probability of de novo by BGM Bayes caller"
 
     def close(self):
-        if (self.detector):
-            self.detector.close()
+        for caller in self.local_callers.values():
+            if caller.detector:
+                caller.detector.close()
 

@@ -26,6 +26,12 @@ from typing import Dict
 
 from .misc import raiseException
 
+pattern = "{sample}.recal.realign.dedup.bam"
+patterns = [pattern, pattern + ".bai"]
+
+def get_bam_patterns():
+    return patterns
+
 
 def parse_fam_files_content(content, name):
     samples = sortedcontainers.SortedDict()

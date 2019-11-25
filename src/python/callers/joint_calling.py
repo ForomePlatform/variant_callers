@@ -22,18 +22,22 @@ import vcf as pyvcf
 
 from callers.ab_denovo_caller import SpABDenovoCaller
 from callers.harness import Harness
+from callers.joint_denovo_caller import JointDenovoCaller
 from utils.case_utils import parse_all_fam_files, get_trios_for_family
 
 
 def run(args):
-    families = parse_all_fam_files(args.families)
     vcf_file = args.vcf
-    vcf_reader = pyvcf.Reader(filename=vcf_file)
-    callers = {
-        SpABDenovoCaller(families[name]) for name in families
-            if (all([s in vcf_reader.samples for s in families[name]])
-                   and len(get_trios_for_family(families[name])) > 0)
-    }
+    # families = parse_all_fam_files(args.families)
+    # vcf_reader = pyvcf.Reader(filename=vcf_file)
+    # callers = {
+    #     SpABDenovoCaller(families[name]) for name in families
+    #         if (all([s in vcf_reader.samples for s in families[name]])
+    #                and len(get_trios_for_family(families[name])) > 0)
+    # }
+    callers = {JointDenovoCaller(f_metadata=args.families, vcf_file=vcf_file,
+                                 path_to_bams=args.bams, path_to_library=args.dnlib,
+                                 bayesian=True)}
     harness = Harness(vcf_file, family=None, callers=callers, flush=True)
     harness.write_header()
     t = harness.run()
@@ -59,6 +63,13 @@ if __name__ == '__main__':
     parser.add_argument("-f", "--families",
                 help="Path to collection of Family (fam) files, required",
                 required=True)
+    parser.add_argument("--bams",
+            help="Results directory, only used for running Bayesian callers",
+            required=False)
+    parser.add_argument("--dnlib",
+            help="Path to De-Novo library. If specified, then Bayesian De-Novo "
+                 "Caller is used, otherwise Allele Balance Caller",
+            required=False)
 
     args = parser.parse_args()
     print(args)

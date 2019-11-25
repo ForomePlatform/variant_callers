@@ -55,12 +55,11 @@ class Harness():
             self.open_calls()
             self.calls_file_open = True
 
-        self.ready = False
         self.header_file = None
         self.variant_counter = 0
         self.call_counter = 0
         self.variant_called = 0
-        self.use_context = True
+        self.use_context = len(callers) > 1
         self.shared_context = None
 
     def update_calls(self, caller:AbstractCaller, all_calls: Dict, new_calls: Dict) -> None:
@@ -74,7 +73,7 @@ class Harness():
             all_calls.update(new_calls)
 
 
-    def init_context(self, samples: List, record: _Record):
+    def init_context(self, samples: Set, record: _Record):
         self.shared_context.reset()
         genotypes = ABCaller.calculate_genotypes(record)
         af = ABCaller.calculate_af(genotypes, samples)
@@ -83,16 +82,15 @@ class Harness():
 
     def run(self):
         t0 = time.time()
-        samples = []
+        samples = {s for s in self.vcf_reader.samples}
+        for caller in self.callers:
+            caller.init(self.family, samples)
+        if self.use_context:
+            self.shared_context = VariantContext()
+            for caller in self.callers:
+                caller.set_shared_context(self.shared_context)
+
         for record in self.vcf_reader:
-            if not self.ready:
-                if self.use_context:
-                    self.shared_context = VariantContext()
-                for caller in self.callers:
-                    samples = {s.sample for s in record.samples}
-                    caller.init(self.family, samples)
-                    caller.set_shared_context(self.shared_context)
-                self.ready = True
             self.variant_counter += 1
             if (self.variant_counter % 10000) == 0:
                 print("Processed {:d} variants, flushed {:d} calls".

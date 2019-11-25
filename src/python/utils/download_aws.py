@@ -23,20 +23,21 @@ import boto3
 import sortedcontainers
 import vcf as pyvcf
 
-from utils.case_utils import parse_all_fam_files, get_trios_for_family
+from utils.case_utils import parse_all_fam_files, get_trios_for_family, \
+    get_bam_patterns
 
 BUCKET = "udn-joint-calling"
 PREFIX = "cases/wes/"
-pattern = "{sample}.recal.realign.dedup.bam"
-patterns = [pattern, pattern + ".bai"]
 
 
 def download_bams_for_trios(metadata:str, vcf_file:str, key:str, secret:str, dest:str):
     s3 = boto3.client('s3', aws_access_key_id=key, aws_secret_access_key=secret)
     families = parse_all_fam_files(metadata)
+    # families = {k:families[k] for k in ["udn0028", "udn0013"]}
     vcf_reader = pyvcf.Reader(filename=vcf_file)
 
     files = sortedcontainers.SortedDict()
+    patterns = get_bam_patterns()
     for name in families:
         family = families[name]
         if not all([s in vcf_reader.samples for s in family]):
@@ -58,6 +59,19 @@ def download_bams_for_trios(metadata:str, vcf_file:str, key:str, secret:str, des
     for f in files:
         object_name = files[f]
         target = os.path.join(dest, f)
+        if os.path.exists(target):
+            response = s3.list_objects(Bucket = BUCKET, Prefix = object_name)
+            size = None
+            for obj in response["Contents"]:
+                if obj["Key"] != object_name:
+                    continue
+                size = obj["Size"]
+                break
+            file_size = os.path.getsize(target)
+            if file_size == size:
+                print("Info: {} already exists, skipping".format(target))
+                continue
+            print ("Warning: {} already exists but has different size".format(target))
         print("Downloading: {} ==> {}".format(object_name, target))
         try:
             s3.download_file(BUCKET, object_name, target)
