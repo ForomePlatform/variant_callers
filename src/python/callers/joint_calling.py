@@ -49,7 +49,7 @@ def run(args):
                                                        harness.variant_called))
 
     harness.write_calls()
-    #harness.apply_calls("xx.vcf")
+    harness.apply_calls("xx.vcf")
 
     print("All Done")
 
