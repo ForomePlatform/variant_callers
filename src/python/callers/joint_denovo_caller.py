@@ -48,7 +48,10 @@ class JointDenovoCaller(AbstractCaller):
         self.path_to_library = path_to_library
         self.pp_threshold = pp_threshold
         self.bayesian = bayesian
-        self.format = "{sample}:{pp:1.2f}"
+        if self.path_to_bams:
+            self.format = "{sample}:{pp:1.2f}"
+        else:
+            self.format = "{sample}:{passed}"
         self.check_families(f_metadata, vcf_file)
 
     def check_families(self, f_metadata:str, vcf_file:str):
@@ -56,7 +59,8 @@ class JointDenovoCaller(AbstractCaller):
         families = parse_all_fam_files(f_metadata)
         vcf_reader = pyvcf.Reader(filename=vcf_file)
         patterns = get_bam_patterns()
-        if self.bayesian:
+        bam_pattern = None
+        if self.bayesian and self.path_to_bams:
             bam_pattern = os.path.join(self.path_to_bams, patterns[0])
         samples = {s for s in vcf_reader.samples}
 
@@ -68,13 +72,16 @@ class JointDenovoCaller(AbstractCaller):
             for proband in trios:
                 trio = trios[proband]
                 if self.bayesian:
-                    list_of_bam_files = [
-                        bam_pattern.format(sample=sample) for sample in trio
-                    ]
-                    if not all (os.path.exists(bam) for bam in list_of_bam_files):
-                        continue
-                    detector = DenovoDetector(self.path_to_library,
-                                    trio_list=list_of_bam_files)
+                    if bam_pattern:
+                        list_of_bam_files = [
+                            bam_pattern.format(sample=sample) for sample in trio
+                        ]
+                        if not all (os.path.exists(bam) for bam in list_of_bam_files):
+                            continue
+                        detector = DenovoDetector(self.path_to_library,
+                                        trio_list=list_of_bam_files)
+                    else:
+                        detector = DenovoDetector(self.path_to_library)
                 else:
                     detector = None
                 ab_caller = ABDenovoCaller()
@@ -112,9 +119,12 @@ class JointDenovoCaller(AbstractCaller):
                 variant = VariantHandler(chromosome, pos, record.REF, record.ALT, af)
                 passed = caller.detector.detect(variant)
                 if (passed):
-                    pp = variant.getProp("PP")
-                    if (pp > self.pp_threshold):
-                        value = self.format.format(sample=proband, pp=pp)
+                    if caller.detector.gives_pp():
+                        pp = variant.getProp("PP")
+                        if (pp > self.pp_threshold):
+                            value = self.format.format(sample=proband, pp=pp)
+                    else:
+                        value = self.format.format(sample=proband, passed="PASSED")
             else:
                 value = self.format.format(sample=proband, pp=1 - af)
             if (value != None):

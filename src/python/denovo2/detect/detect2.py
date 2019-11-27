@@ -81,7 +81,7 @@ class VariantHandler:
 
     def getAF(self):
         return self.mAF
-        
+
     def getProp(self, key):
         return self.mProps.get(key)
 
@@ -115,10 +115,14 @@ class VariantHandler:
 
 #========================================
 class DenovoDetector:
-    def __init__(self, unrelated_dir, trio_filename=None, trio_list=None,
-                 dump_filename=None, mdl_file=None):
-        self.mTrioSamFiles = PysamList(file_with_list_of_filenames=trio_filename,
-                                       list_of_bams=trio_list)
+    def __init__(self, unrelated_dir, trio_filename = None, trio_list = None,
+            dump_filename = None, mdl_file = None):
+        if trio_filename is not None or trio_list is not None:
+            self.mTrioSamFiles = PysamList(
+                file_with_list_of_filenames = trio_filename,
+                list_of_bams = trio_list)
+        else:
+            self.mTrioSamFiles = None
         self.mUnrelLib = None
         self.mDumpFName = dump_filename
         if unrelated_dir is not None:
@@ -126,13 +130,16 @@ class DenovoDetector:
         else:
             assert self.mDumpFName is None
             self.mUnrelMdl = DeNovo_MDL_Reader(mdl_file)
-    
+
     def close(self):
         if self.mUnrelLib is not None:
             self.mUnrelLib.finishUp()
         else:
             self.mUnrelMdl.close()
-        
+
+    def gives_pp(self):
+        return self.mTrioSamFiles is not None
+
     def detect(self,  variant):
         if self.mDumpFName:
             self.mUnrelLib.mineAD(variant)
@@ -140,22 +147,25 @@ class DenovoDetector:
             ad_model = DeNovo_Model.createByADLib(variant, self.mUnrelLib)
         else:
             ad_model = self.mUnrelMdl.getPosModel(variant)
-        ad_model.evalVariant(variant, self.mTrioSamFiles)
+        if self.mTrioSamFiles is None:
+            variant.setProp("PASSED", not ad_model.isBad())
+        else:
+            ad_model.evalVariant(variant, self.mTrioSamFiles)
         return variant.getProp("PASSED")
 
 #========================================
 def runner(outfilename, initial_filename, unrelated_dir, mdl_file,
         trio_filename, dump_filename):
     detector = DenovoDetector(unrelated_dir, trio_filename,
-                              dump_filename=dump_filename, mdl_file=mdl_file)
-            
+        dump_filename = dump_filename, mdl_file = mdl_file)
+
     variants = VariantHandler.loadFile(initial_filename)
 
     for count, variant in enumerate(variants):
         passed = detector.detect(variant)
         print("Variant", count, variant.getChromName(), variant.getPos(),
             "AF=", variant.getAF(), "passed=", passed)
-    
+
     detector.close()
 
     with open(outfilename, "w") as outp:
@@ -175,12 +185,12 @@ if __name__=="__main__":
     parser.add_argument("--output", "-O",
         help = "Output resulting file, required", required = True)
     parser.add_argument("--initial", "-I",
-        help = "Initial file with 1st stage result, required", 
+        help = "Initial file with 1st stage result, required",
         required = True)
     parser.add_argument("--unrelated", "-U",
         help = "Path to directory with libraries of unrelated, required")
     parser.add_argument("--trio", "-T",
-        help = "Path to file describing trio BAM-files, required", 
+        help = "Path to file describing trio BAM-files, required",
         required = True)
     parser.add_argument("--dump", "-D",
         help = "Tool for test original Anvoy code")
@@ -188,7 +198,7 @@ if __name__=="__main__":
         help = "AD-MDL index file, can be used instead of -U")
 
     args = parser.parse_args()
-    
+
     if (args.unrelated,  args.mdl) == (None,  None):
         print("Either -I or -U option is required")
 
