@@ -48,7 +48,8 @@ class JointDenovoCaller(AbstractCaller):
         self.path_to_library = path_to_library
         self.pp_threshold = pp_threshold
         self.bayesian = bayesian
-        if self.path_to_bams:
+        self.calculates_pp = True if self.path_to_bams else False
+        if self.calculates_pp:
             self.format = "{sample}:{pp:1.2f}"
         else:
             self.format = "{sample}:{passed}"
@@ -60,9 +61,13 @@ class JointDenovoCaller(AbstractCaller):
         vcf_reader = pyvcf.Reader(filename=vcf_file)
         patterns = get_bam_patterns()
         bam_pattern = None
-        if self.bayesian and self.path_to_bams:
+        if self.bayesian and self.calculates_pp:
             bam_pattern = os.path.join(self.path_to_bams, patterns[0])
         samples = {s for s in vcf_reader.samples}
+
+        shared_detector = None
+        if not self.calculates_pp:
+            shared_detector = DenovoDetector(self.path_to_library)
 
         for name in families:
             family = families[name]
@@ -72,7 +77,7 @@ class JointDenovoCaller(AbstractCaller):
             for proband in trios:
                 trio = trios[proband]
                 if self.bayesian:
-                    if bam_pattern:
+                    if self.calculates_pp:
                         list_of_bam_files = [
                             bam_pattern.format(sample=sample) for sample in trio
                         ]
@@ -81,7 +86,7 @@ class JointDenovoCaller(AbstractCaller):
                         detector = DenovoDetector(self.path_to_library,
                                         trio_list=list_of_bam_files)
                     else:
-                        detector = DenovoDetector(self.path_to_library)
+                        detector = shared_detector
                 else:
                     detector = None
                 ab_caller = ABDenovoCaller()
