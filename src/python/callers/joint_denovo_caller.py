@@ -29,6 +29,8 @@ import sortedcontainers
 import vcf as pyvcf
 
 from utils.case_utils import parse_all_fam_files, get_trios_for_family, get_bam_patterns
+from utils.tsv import TSVReader, create_tsv_reader
+
 
 class LocalCaller:
     def __init__(self, proband:str, caller: ABDenovoCaller, detector: DenovoDetector) -> None:
@@ -41,7 +43,8 @@ class LocalCaller:
 class JointDenovoCaller(AbstractCaller):
     def __init__(self, f_metadata:str, vcf_file:str, path_to_bams: str,
                  path_to_library: str,
-                 pp_threshold: float = 0.7, bayesian: bool = True):
+                 pp_threshold: float = 0.7, bayesian: bool = True,
+                 first_stage_calls:str = None, families_subset:List = None):
         super().__init__()
         self.local_callers = dict()
         self.path_to_bams = path_to_bams
@@ -53,14 +56,27 @@ class JointDenovoCaller(AbstractCaller):
             self.format = "{sample}:{pp:1.2f}"
         else:
             self.format = "{sample}:{passed}"
-        self.check_families(f_metadata, vcf_file)
+        self.first_stage_reader = None
+        self.check_families(f_metadata, vcf_file, first_stage_calls, families_subset)
 
-    def check_families(self, f_metadata:str, vcf_file:str):
+    def check_families(self, f_metadata:str, vcf_file:str,
+                       first_stage_calls:str, families_subset:List):
         self.local_callers = sortedcontainers.SortedDict()
         families = parse_all_fam_files(f_metadata)
         vcf_reader = pyvcf.Reader(filename=vcf_file)
         patterns = get_bam_patterns()
         bam_pattern = None
+        if first_stage_calls:
+            if not self.bayesian or not self.calculates_pp:
+                raiseException("Second stage cam only be Bayesian")
+            fmt = "{sample}:PASSED"
+            self.first_stage_reader = create_tsv_reader(
+                families=families_subset,
+                metadata=families,
+                tsv_calls_file=first_stage_calls,
+                format_string=fmt
+            )
+
         if self.bayesian and self.calculates_pp:
             bam_pattern = os.path.join(self.path_to_bams, patterns[0])
         samples = {s for s in vcf_reader.samples}
@@ -100,20 +116,27 @@ class JointDenovoCaller(AbstractCaller):
         return
 
     def make_call(self, record: _Record) -> Dict:
+        chromosome = record.CHROM
+        if not chromosome.startswith("chr"):
+            chromosome = "chr" + chromosome
+        pos = record.POS
+        if self.first_stage_reader:
+            if not self.first_stage_reader.has_call(chromosome, pos):
+                return dict()
+
         result = []
 
         self.variant_context.reset()
         samples = {s.sample for s in record.samples}
         genotypes = ABDenovoCaller.calculate_genotypes(record)
         af = ABDenovoCaller.calculate_af(genotypes, samples)
-        chromosome = record.CHROM
-        if not chromosome.startswith("chr"):
-            chromosome = "chr" + chromosome
-        pos = record.POS
         self.variant_context["genotypes"] = genotypes
         self.variant_context["af"] = af
 
         for proband in self.local_callers:
+            if self.first_stage_reader:
+                if not self.first_stage_reader.has_sample(chromosome, pos, proband):
+                    continue
             caller = self.local_callers[proband]
             parent_call = caller.parent_caller.make_call(record)
             if not parent_call:

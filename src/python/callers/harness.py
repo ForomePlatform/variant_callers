@@ -25,10 +25,11 @@ from collections import OrderedDict
 import sortedcontainers
 import vcf as pyvcf
 from vcf.model import _Record
-from typing import Dict, Set, List
+from typing import Dict, Set, List, Collection
 
 from callers.ab_caller import ABCaller
 from callers.abstract_caller import AbstractCaller, VariantContext
+from utils.vcf_wrappers import JumpVCFReader
 
 HEADER_FILE_NAME = "new_calls_header.vcf"
 CALLS_FILE_NAME = "new_calls.tsv"
@@ -40,10 +41,24 @@ def execute(cmd):
     os.system(cmd)
 
 class Harness():
-    def __init__(self, vcf_file: str, family: Dict, callers: Set, flush = None) -> None:
+    def __init__(self, vcf_file: str, family: Dict, callers: Set,
+                 flush = None, call_set:List = None, start_pos = None) -> None:
         super().__init__()
         self.input_vcf = vcf_file
-        self.vcf_reader = pyvcf.Reader(filename=self.input_vcf)
+        if call_set:
+            self.vcf_reader = JumpVCFReader(filename=self.input_vcf,
+                                            call_set=call_set)
+        else:
+            self.vcf_reader = pyvcf.Reader(filename=self.input_vcf)
+        if start_pos:
+            x = start_pos.split(':')
+            chromosome = x[0].strip()
+            if len(x) > 1:
+                pos = int(x[1].strip()) - 1
+            else:
+                pos = None
+            print("Jumping to position: {}: {}".format(chromosome, pos))
+            self.vcf_reader.fetch(chromosome, pos)
         self.family = family
         self.calls = OrderedDict()
         self.callers = callers
@@ -93,8 +108,8 @@ class Harness():
         for record in self.vcf_reader:
             self.variant_counter += 1
             if (self.variant_counter % 10000) == 0:
-                print("Processed {:d} variants, flushed {:d} calls".
-                      format(self.variant_counter, self.call_counter))
+                print("Processed {:d} variants in {:7.2f} sec, flushed {:d} calls".
+                      format(self.variant_counter, time.time() - t0, self.call_counter))
 
             try:
                 if self.use_context:
@@ -173,8 +188,9 @@ class Harness():
 
     def apply_calls(self, output_file):
         self.flush_calls()
-        tags = self.get_tags()
-        
+        tags = [t for t in self.get_tags()]
+
+        execute("cp {} {}".format(self.calls_file, self.calls_file + ".final"))
         execute("bgzip -f {}".format(self.calls_file))
         execute("tabix -s1 -b2 -e2 -f {}.gz".format(self.calls_file))
         columns = ','.join(["CHROM","POS"] + tags)

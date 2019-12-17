@@ -24,6 +24,7 @@ from callers.ab_denovo_caller import SpABDenovoCaller
 from callers.harness import Harness
 from callers.joint_denovo_caller import JointDenovoCaller
 from utils.case_utils import parse_all_fam_files, get_trios_for_family
+from utils.tsv import create_tsv_reader
 
 
 def run(args):
@@ -35,10 +36,35 @@ def run(args):
     #         if (all([s in vcf_reader.samples for s in families[name]])
     #                and len(get_trios_for_family(families[name])) > 0)
     # }
+
+    families = None
+    call_set = None
+    calls_file = args.f1
+    all_families = parse_all_fam_files(args.families)
+    if args.filter:
+        if '-' in args.filter:
+            x = args.filter.split('-')
+            families = [f for f in all_families if x[0] <= f <= x[1]]
+        else:
+            families = args.filter.split(',')
+
+    if calls_file:
+        tsv_reader = create_tsv_reader(families, all_families, calls_file,
+                                       "{sample}:PASSED")
+        call_set = tsv_reader.call_list()
+
     callers = {JointDenovoCaller(f_metadata=args.families, vcf_file=vcf_file,
                                  path_to_bams=args.bams, path_to_library=args.dnlib,
-                                 bayesian=True)}
-    harness = Harness(vcf_file, family=None, callers=callers, flush=True)
+                                 bayesian=True, first_stage_calls=calls_file,
+                                 families_subset=families)}
+
+    if args.output:
+        flush = args.output
+    else:
+        flush = True
+
+    harness = Harness(vcf_file, family=None, callers=callers, flush=flush,
+                      call_set=call_set, start_pos=args.start)
     harness.write_header()
     t = harness.run()
     n = harness.variant_counter
@@ -49,7 +75,8 @@ def run(args):
                                                        harness.variant_called))
 
     harness.write_calls()
-    harness.apply_calls("xx.vcf")
+    if args.apply:
+        harness.apply_calls("xx.vcf")
 
     print("All Done")
 
@@ -70,6 +97,20 @@ if __name__ == '__main__':
             help="Path to De-Novo library. If specified, then Bayesian De-Novo "
                  "Caller is used, otherwise Allele Balance Caller",
             required=False)
+    parser.add_argument("--1", dest="f1",
+            help="Path to a file containing results from teh first stage",
+            required=False)
+    parser.add_argument("--filter",
+            help="Comma separated list of families to include or a range",
+            required=False)
+    parser.add_argument("--start",
+            help="Start position in input VCF File",
+            required=False)
+    parser.add_argument("--output",
+            help="Output file with new calls",
+            required=False)
+    parser.add_argument("--apply", action="store_true",
+            help="", required=False)
 
     args = parser.parse_args()
     print(args)
