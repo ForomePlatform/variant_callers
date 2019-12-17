@@ -20,7 +20,7 @@
 from functools import total_ordering
 from typing import Collection, List, Dict
 
-import sortedcollections
+import sortedcontainers
 
 from utils.case_utils import get_trios_for_family
 
@@ -69,7 +69,7 @@ class TSVReader:
         self.samples = samples
         patterns = dict()
         patterns.update({s:format_string.format(sample=s) for s in self.samples})
-        self.candidate_calls = sortedcollections.SortedDict()
+        self.candidate_calls = sortedcontainers.SortedDict()
         with open(tsv_calls_file) as calls:
             for call in calls:
                 if call.startswith('#'):
