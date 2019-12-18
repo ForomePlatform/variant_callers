@@ -19,6 +19,7 @@
 #  limitations under the License.
 
 import os
+import shutil
 import time
 from collections import OrderedDict
 
@@ -40,6 +41,26 @@ def execute(cmd):
     print (cmd) 
     os.system(cmd)
 
+
+def next_chromosome(chromosome:str) -> str:
+    prefix = ""
+    if chromosome.startswith('chr'):
+        chromosome = chromosome[3:]
+        prefix = 'chr'
+    try:
+        c = int(chromosome)
+        if c < 22:
+           return prefix + str(c+1)
+        return prefix + 'X'
+    except:
+        chromosome = chromosome.upper()
+        if chromosome == 'X':
+            return prefix + 'Y'
+        elif chromosome == 'M':
+            return prefix + '1'
+        return None
+
+
 class Harness():
     def __init__(self, vcf_file: str, family: Dict, callers: Set,
                  flush = None, call_set:List = None, start_pos = None) -> None:
@@ -59,6 +80,9 @@ class Harness():
                 pos = None
             print("Jumping to position: {}: {}".format(chromosome, pos))
             self.vcf_reader.fetch(chromosome, pos)
+            self.fetch_next = True
+        else:
+            self.fetch_next = False
         self.family = family
         self.calls = OrderedDict()
         self.callers = callers
@@ -105,7 +129,23 @@ class Harness():
             for caller in self.callers:
                 caller.set_shared_context(self.shared_context)
 
-        for record in self.vcf_reader:
+        #        for record in self.vcf_reader:
+        record = None
+        while True:
+            prev = record
+            try:
+                record = next(self.vcf_reader)
+            except StopIteration:
+                if prev:
+                    chromosome = next_chromosome(prev.CHROM)
+                    if chromosome:
+                        print("Jumping to {}".format(chromosome))
+                        self.vcf_reader.fetch(chromosome)
+                    else:
+                        break
+                else:
+                    break
+
             self.variant_counter += 1
             if (self.variant_counter % 10000) == 0:
                 print("Processed {:d} variants in {:7.2f} sec, flushed {:d} calls".
@@ -136,6 +176,12 @@ class Harness():
             except Exception as e:
                 print("Error in {}: {}".format(record.CHROM, record.POS))
                 print(str(e))
+
+        if self.calls_file_open and len(self.calls) > 0:
+            self.flush_calls()
+            print("Totally: processed {:d} variants, flushed {:d} calls".
+                  format(self.variant_counter, self.call_counter))
+
         return (time.time() - t0)
 
     def get_calls(self):
@@ -171,7 +217,13 @@ class Harness():
             self.calls_file = file_name
         elif not self.calls_file:
             self.calls_file = CALLS_FILE_NAME
-        self.open_calls()
+        if not self.calls_file_open:
+            self.open_calls()
+        if os.path.exists(self.calls_file):
+            try:
+                shutil.copyfile(self.calls_file, self.calls_file + ".bak")
+            except Exception as e:
+                print(e)
         self.flush_calls()
 
     def flush_calls(self):
