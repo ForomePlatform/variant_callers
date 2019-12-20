@@ -147,7 +147,11 @@ class Harness():
                     break
 
             self.variant_counter += 1
-            if (self.variant_counter % 10000) == 0:
+            if (hasattr(self.variant_counter, "jump")):
+                step = 1000
+            else:
+                step = 10000
+            if (self.variant_counter % step) == 0:
                 print("Processed {:d} variants in {:7.2f} sec, flushed {:d} calls".
                       format(self.variant_counter, time.time() - t0, self.call_counter))
 
