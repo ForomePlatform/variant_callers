@@ -63,6 +63,8 @@ class JointDenovoCaller(AbstractCaller):
                        first_stage_calls:str, families_subset:List):
         self.local_callers = sortedcontainers.SortedDict()
         families = parse_all_fam_files(f_metadata)
+        if families_subset:
+            families = {f:families[f] for f in families_subset}
         vcf_reader = pyvcf.Reader(filename=vcf_file)
         patterns = get_bam_patterns()
         bam_pattern = None
@@ -98,6 +100,8 @@ class JointDenovoCaller(AbstractCaller):
                             bam_pattern.format(sample=sample) for sample in trio
                         ]
                         if not all (os.path.exists(bam) for bam in list_of_bam_files):
+                            print("Skipping family {} because not all "
+                                  "bams are present".format(name))
                             continue
                         detector = DenovoDetector(self.path_to_library,
                                         trio_list=list_of_bam_files)

@@ -47,6 +47,7 @@ def run(args):
             families = [f for f in all_families if x[0] <= f <= x[1]]
         else:
             families = args.filter.split(',')
+        print("Families: {}".format(','.join(families)))
 
     if calls_file:
         tsv_reader = create_tsv_reader(families, all_families, calls_file,
