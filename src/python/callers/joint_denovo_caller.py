@@ -114,6 +114,7 @@ class JointDenovoCaller(AbstractCaller):
                 ab_caller.init(family, samples)
                 local_caller = LocalCaller(proband, ab_caller, detector)
                 self.local_callers[proband] = local_caller
+        print("Total trios: {:d}".format(len(self.local_callers)))
         return
 
     def init(self, families: Dict, samples: Set):
