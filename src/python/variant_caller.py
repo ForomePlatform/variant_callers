@@ -34,17 +34,21 @@ def run (args):
     fam_file = args.family
 
     family = parse_fam_file(fam_file)
+    b = ("de-novo-b" in args.callers)
 
-    need_standard_de_novo = (not args.callers) or ("de-novo" in args.callers)
+    need_standard_de_novo = (not args.callers) or ("de-novo" in args.callers) or b
 
     if (args.dnlib and need_standard_de_novo):
-        denovo_caller = BayesDenovoCaller(ABDenovoCaller(), args.results, args.dnlib)
+        denovo_caller = BayesDenovoCaller(ABDenovoCaller(),
+                                          args.results,
+                                          args.dnlib,
+                                          include_parent_calls=not b)
     else:
         denovo_caller = ABDenovoCaller()
 
     if args.callers:
         callers = set()
-        if "de-novo" in args.callers:
+        if {"de-novo", "de-novo-b"} & set(args.callers):
             callers.add(denovo_caller)
         elif "compound_het" in args.callers:
             callers.add(ABCompoundHeterozygousCaller(),)
