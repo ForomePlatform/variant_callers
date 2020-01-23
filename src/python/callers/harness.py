@@ -63,7 +63,8 @@ def next_chromosome(chromosome:str) -> str:
 
 class Harness():
     def __init__(self, vcf_file: str, family: Dict, callers: Set,
-                 flush = None, call_set:List = None, start_pos = None) -> None:
+                 flush = None, call_set:List = None, start_pos = None,
+                 stop = False) -> None:
         super().__init__()
         self.input_vcf = vcf_file
         if call_set:
@@ -80,7 +81,10 @@ class Harness():
                 pos = None
             print("Jumping to position: {}: {}".format(chromosome, pos))
             self.vcf_reader.fetch(chromosome, pos)
-            self.fetch_next = True
+            if stop:
+                self.fetch_next = False
+            else:
+                self.fetch_next = True
         else:
             self.fetch_next = False
         self.family = family
@@ -136,7 +140,7 @@ class Harness():
             try:
                 record = next(self.vcf_reader)
             except StopIteration:
-                if prev:
+                if prev and self.fetch_next:
                     chromosome = next_chromosome(prev.CHROM)
                     if chromosome:
                         print("Jumping to {}".format(chromosome))

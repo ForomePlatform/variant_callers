@@ -64,7 +64,13 @@ def run (args):
             ABHomozygousRecessiveCaller()
         }
 
-    harness = Harness(vcf_file, family, callers, flush=True)
+    if args.output:
+        flush = args.output
+    else:
+        flush = True
+
+    harness = Harness(vcf_file, family, callers, flush=flush,
+                      start_pos=args.start, stop = args.stop)
     harness.write_header()
     t = harness.run()
     n = harness.variant_counter
@@ -75,7 +81,8 @@ def run (args):
                                                        harness.variant_called))
 
     harness.write_calls()
-    harness.apply_calls("xx.vcf")
+    if args.apply:
+        harness.apply_calls("xx.vcf")
 
     print("All Done")
 
@@ -97,6 +104,19 @@ if __name__ == '__main__':
             required=False)
     parser.add_argument("--callers", nargs="*",
                         help="List of callers if different from default")
+    parser.add_argument("--start",
+            help="Start position in input VCF File",
+            required=False)
+    parser.add_argument("--stop", action="store_true",
+            help="If start position is given then tells if to stop when reaches "
+                 "the end of chromosome",
+            required=False)
+    parser.add_argument("--output",
+            help="Output file with new calls",
+            required=False)
+    parser.add_argument("--apply", action="store_true",
+            help="", required=False)
+
     args = parser.parse_args()
     print(args)
 

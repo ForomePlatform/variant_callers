@@ -71,7 +71,7 @@ class ABCaller(AbstractCaller):
         for sample in record.samples:
             gt = sample.gt_type
             ad = getattr(sample.data, 'AD', None)
-            if ad:
+            if ad and isinstance(ad, list):
                 n_ref = ad[0]
                 n_alt = sum(ad[1:])
                 if n_ref + n_alt > 0:
