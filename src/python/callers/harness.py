@@ -240,6 +240,8 @@ class Harness():
         self.flush_calls()
 
     def flush_calls(self):
+        if not self.calls:
+            return
         if not self.calls_file_open:
             self.open_calls()
         tags = self.get_tags()
@@ -251,11 +253,16 @@ class Harness():
                 f.write(line + '\n')
         self.calls.clear()
 
-    def apply_calls(self, output_file):
+    def apply_calls(self, output_file, tags = None):
         self.flush_calls()
-        tags = [t for t in self.get_tags()]
+        if not tags:
+            tags = [t for t in self.get_tags()]
+        calls_file_final = self.calls_file + ".final"
+        if os.path.exists(self.calls_file):
+            execute("cp {} {}".format(self.calls_file, calls_file_final))
+        else:
+            execute("cp {} {}".format(calls_file_final, self.calls_file))
 
-        execute("cp {} {}".format(self.calls_file, self.calls_file + ".final"))
         execute("bgzip -f {}".format(self.calls_file))
         execute("tabix -s1 -b2 -e2 -f {}.gz".format(self.calls_file))
         columns = ','.join(["CHROM","POS"] + tags)
@@ -263,3 +270,21 @@ class Harness():
                   format(self.calls_file, self.header_file, columns, output_file, self.input_vcf))
 
 
+    @classmethod
+    def read_header(cls, header_file):
+        metadata = dict()
+        with open(header_file) as hdr:
+            for line in hdr:
+                if not line.startswith("##INFO="):
+                    continue
+                info = line.strip()[len("##INFO=<"):-1]
+                id = None
+                number = None
+                for x in info.split(','):
+                    xx = x.split('=')
+                    if xx[0] == "ID":
+                        id = xx[1]
+                    elif xx[0] == "Number":
+                        number = int(xx[1])
+                metadata[id] = number
+        return metadata
