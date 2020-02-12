@@ -62,7 +62,7 @@ class AbstractCaller(ABC):
         return {}
 
     def get_my_tag(self):
-        return "FOR"
+        return "BGM"
 
     def get_all_tags(self):
         return [self.get_my_tag()]
