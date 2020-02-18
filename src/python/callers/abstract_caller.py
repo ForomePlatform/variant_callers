@@ -17,21 +17,40 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-
+import sys
 from abc import ABC, abstractmethod
 from typing import Dict, Set, Tuple, List
 from vcf.model import _Record
+
+from utils.misc import raiseException
+import random
+
+class VariantContext(dict):
+    def __init__(self):
+        super().__init__()
+        self.random = random.randint(0, sys.maxsize)
+
+    def reset(self):
+        self.clear()
+
+    def put(self, key, value):
+        self[key] = value
 
 
 class AbstractCaller(ABC):
     def __init__(self):
         self.family = None
         self.samples = None
+        self.variant_context = VariantContext()
+        self.shared_context = False
         self.unrelated_samples = set()
         return
 
     def init(self, family: Dict, samples: Set):
-        self.family = family
+        if (family):
+            self.family = family
+        if (not all([s in samples for s in self.family])):
+            raiseException("Samples {} are not in VCF".format(','.join(self.family)))
         self.samples = samples
         self.unrelated_samples = self.samples - self.family.keys()
         self.affected_samples = [id for id in self.family if self.family[id]['affected']]
@@ -43,7 +62,7 @@ class AbstractCaller(ABC):
         return {}
 
     def get_my_tag(self):
-        return "FOR"
+        return "BGM"
 
     def get_all_tags(self):
         return [self.get_my_tag()]
@@ -76,3 +95,13 @@ class AbstractCaller(ABC):
     @staticmethod
     def gt_to_int(gl: List):
         return [g if g != None else 0 for g in gl]
+
+    def add_to_context(self, key, value):
+        self.variant_context.put(key, value)
+
+    def reset_context(self):
+        self.variant_context.reset()
+
+    def set_shared_context(self, shared_ctx: VariantContext):
+        self.variant_context = shared_ctx
+        self.shared_context = True

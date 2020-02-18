@@ -100,3 +100,4 @@ class BayesDenovoCaller(AbstractCaller):
     def close(self):
         if (self.detector):
             self.detector.close()
+

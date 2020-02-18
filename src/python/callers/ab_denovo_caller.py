@@ -29,7 +29,7 @@ class ABDenovoCaller(ABCaller):
 
     def check_genotypes(self, a: List, u: List) -> Tuple:
         if (all([g > 0 for g in a]) and sum(u) == 0):
-            return (self.get_my_tag(), None)
+            return (self.get_my_tag(), self.get_value())
         return ()
 
     def get_my_tag(self):
@@ -39,4 +39,19 @@ class ABDenovoCaller(ABCaller):
         return "Flag"
 
     def get_description(self):
-        return "De novo by BGM allele balance caller"
+        return "De-novo by BGM allele balance caller"
+
+    def get_value(self):
+        return None
+
+
+class SpABDenovoCaller(ABDenovoCaller):
+    def __init__(self, family, recall_genotypes = True):
+        super().__init__(recall_genotypes)
+        self.family = family
+
+    def get_value(self):
+        return ','.join(self.affected_samples)
+
+    def get_type(self):
+        return "String"

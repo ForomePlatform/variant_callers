@@ -24,7 +24,7 @@ from callers.ab_compound_het_caller import ABCompoundHeterozygousCaller
 from callers.ab_denovo_caller import ABDenovoCaller
 from callers.ab_homo_rec_caller import ABHomozygousRecessiveCaller
 from callers.bayes_denovo_caller import BayesDenovoCaller
-from callers.harness import Harness
+from callers.harness import Harness, HEADER_FILE_NAME, CALLS_FILE_NAME
 from callers.tag_caller import TagCaller
 from utils.case_utils import parse_fam_file
 
@@ -34,17 +34,21 @@ def run (args):
     fam_file = args.family
 
     family = parse_fam_file(fam_file)
+    b = args.callers and ("de-novo-b" in args.callers)
 
-    need_standard_de_novo = (not args.callers) or ("de-novo" in args.callers)
+    need_standard_de_novo = (not args.callers) or ("de-novo" in args.callers) or b
 
     if (args.dnlib and need_standard_de_novo):
-        denovo_caller = BayesDenovoCaller(ABDenovoCaller(), args.results, args.dnlib)
+        denovo_caller = BayesDenovoCaller(ABDenovoCaller(),
+                                          args.results,
+                                          args.dnlib,
+                                          include_parent_calls=not b)
     else:
         denovo_caller = ABDenovoCaller()
 
     if args.callers:
         callers = set()
-        if "de-novo" in args.callers:
+        if {"de-novo", "de-novo-b"} & set(args.callers):
             callers.add(denovo_caller)
         elif "compound_het" in args.callers:
             callers.add(ABCompoundHeterozygousCaller(),)
@@ -60,18 +64,33 @@ def run (args):
             ABHomozygousRecessiveCaller()
         }
 
-    harness = Harness(vcf_file, family, callers, flush=True)
-    harness.write_header()
-    t = harness.run()
-    n = harness.variant_counter
+    if args.output and args.execute:
+        flush = args.output
+    elif not args.execute:
+        flush = False
+    else:
+        flush = True
 
-    print("Processed {:d} variants in {:.2f} seconds; rate = {:3.3f} variant/sec".
-          format(n, t, n/t))
-    print("Detected {:d} calls in {:d} variants".format(harness.call_counter,
-                                                       harness.variant_called))
+    harness = Harness(vcf_file, family, callers, flush=flush,
+                      start_pos=args.start, stop = args.stop)
+    if args.execute:
+        harness.write_header()
+        t = harness.run()
+        n = harness.variant_counter
 
-    harness.write_calls()
-    harness.apply_calls("xx.vcf")
+        print("Processed {:d} variants in {:.2f} seconds; rate = {:3.3f} variant/sec".
+              format(n, t, n/t))
+        print("Detected {:d} calls in {:d} variants".format(harness.call_counter,
+                                                           harness.variant_called))
+
+        harness.write_calls()
+        tags = None
+    else:
+        harness.calls_file = args.output
+        harness.header_file = args.header
+        tags = [t for t in Harness.read_header(args.header)]
+    if args.apply:
+        harness.apply_calls("xx.vcf", tags)
 
     print("All Done")
 
@@ -93,7 +112,38 @@ if __name__ == '__main__':
             required=False)
     parser.add_argument("--callers", nargs="*",
                         help="List of callers if different from default")
+    parser.add_argument("--start",
+            help="Start position in input VCF File",
+            required=False)
+    parser.add_argument("--stop", action="store_true",
+            help="If start position is given then tells if to stop when reaches "
+                 "the end of chromosome",
+            required=False)
+    parser.add_argument("--output",
+            help="Output file with new calls",
+            required=False)
+    parser.add_argument("--header",
+            help="File with additional VCF headers",
+            required=False)
+    parser.add_argument("--apply", action="store_true",
+            help="Apply calls after execution is complete", required=False)
+    parser.add_argument("--apply_calls", help="Do not run the caller, just "
+                        "apply calls from a given file", required=False)
+
     args = parser.parse_args()
+
+    if args.apply_calls:
+        args.apply = True
+        args.execute = False
+        args.output = args.apply_calls
+        if not args.header:
+            if args.output == CALLS_FILE_NAME:
+                args.header = HEADER_FILE_NAME
+            else:
+                args.header = args.output + ".hdr"
+    else:
+        args.execute = True
+
     print(args)
 
     run(args)

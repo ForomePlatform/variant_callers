@@ -83,7 +83,7 @@ class VariantHandler:
 
     def getAF(self):
         return self.mAF
-        
+
     def getProp(self, key):
         return self.mProps.get(key)
 
@@ -120,6 +120,14 @@ class VariantHandler:
 
 #========================================
 class DenovoDetector:
+    def __init__(self, unrelated_dir, trio_filename = None, trio_list = None,
+            dump_filename = None, mdl_file = None):
+        if trio_filename is not None or trio_list is not None:
+            self.mTrioSamFiles = PysamList(
+                file_with_list_of_filenames = trio_filename,
+                list_of_bams = trio_list)
+        else:
+            self.mTrioSamFiles = None
     def __init__(self, unrelated_dir, trio_filename=None, trio_list=None,
             dump_filename=None, mdl_file=None):
         self.mTrioSamFiles = PysamList(
@@ -138,7 +146,10 @@ class DenovoDetector:
             self.mUnrelLib.finishUp()
         else:
             self.mUnrelMdl.close()
-        
+
+    def gives_pp(self):
+        return self.mTrioSamFiles is not None
+
     def detect(self,  variant):
         if self.mDumpFName:
             self.mUnrelLib.mineAD(variant)
@@ -146,7 +157,10 @@ class DenovoDetector:
             ad_model = DeNovo_Model.createByADLib(variant, self.mUnrelLib)
         else:
             ad_model = self.mUnrelMdl.getPosModel(variant)
-        ad_model.evalVariant(variant, self.mTrioSamFiles)
+        if self.mTrioSamFiles is None:
+            variant.setProp("PASSED", not ad_model.isBad())
+        else:
+            ad_model.evalVariant(variant, self.mTrioSamFiles)
         return variant.getProp("PASSED")
 
 #========================================
