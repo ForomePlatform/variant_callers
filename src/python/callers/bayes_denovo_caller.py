@@ -28,8 +28,10 @@ from utils.misc import raiseException
 
 
 class BayesDenovoCaller(AbstractCaller):
-    def __init__(self, parent:ABCaller, path_to_bams:str, path_to_library:str,
-                 pp_threshold:float = 0.7, include_parent_calls:bool = True):
+    def __init__(self, parent: ABCaller,
+            path_to_bams: str, path_to_library: str,
+            pp_threshold: float = 0.7, include_parent_calls: bool = True,
+            base_ref = None):
         super().__init__()
         self.parent = parent
         self.path_to_bams = path_to_bams
