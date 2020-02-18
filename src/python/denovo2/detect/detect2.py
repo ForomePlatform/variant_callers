@@ -45,7 +45,7 @@ def num2chrom(chrom_num):
 #========================================
 class VariantHandler:
     def __init__(self, chrom_name, pos, ref, alt, af,
-            chrom_num = None, ref_base = None):
+                 chrom_num = None, base_ref = None):
         if chrom_num is not None:
             assert chrom_name is None
             chrom_name = "chr" + num2chrom(chrom_num)
@@ -56,7 +56,7 @@ class VariantHandler:
         self.mAlt = alt
         self.mAF = float(af)
         self.mProps = dict()
-        self.mRefBase = "hg19" if ref_base is None else ref_base
+        self.mRefBase = "hg19" if base_ref is None else base_ref
 
     # Attention: set level = 2 for keep only snip variants
     def isGood(self, level = 1):
