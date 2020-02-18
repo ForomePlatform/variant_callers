@@ -128,11 +128,11 @@ class DenovoDetector:
                 list_of_bams = trio_list)
         else:
             self.mTrioSamFiles = None
-    def __init__(self, unrelated_dir, trio_filename=None, trio_list=None,
-            dump_filename=None, mdl_file=None):
-        self.mTrioSamFiles = PysamList(
-            file_with_list_of_filenames = trio_filename,
-            list_of_bams = trio_list)
+    # def __init__(self, unrelated_dir, trio_filename=None, trio_list=None,
+    #         dump_filename=None, mdl_file=None):
+    #     self.mTrioSamFiles = PysamList(
+    #         file_with_list_of_filenames = trio_filename,
+    #         list_of_bams = trio_list)
         self.mUnrelLib = None
         self.mDumpFName = dump_filename
         if unrelated_dir is not None:
