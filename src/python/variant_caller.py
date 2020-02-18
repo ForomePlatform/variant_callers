@@ -42,7 +42,8 @@ def run (args):
         denovo_caller = BayesDenovoCaller(ABDenovoCaller(),
                                           args.results,
                                           args.dnlib,
-                                          include_parent_calls=not b)
+                                          include_parent_calls=not b,
+                                          base_ref=args.assembly)
     else:
         denovo_caller = ABDenovoCaller()
 
@@ -121,6 +122,9 @@ if __name__ == '__main__':
             required=False)
     parser.add_argument("--output",
             help="Output file with new calls",
+            required=False)
+    parser.add_argument("--assembly", default="hg19",
+            help="Assembly to be used: hg19/hg38",
             required=False)
     parser.add_argument("--header",
             help="File with additional VCF headers",

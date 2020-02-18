@@ -90,7 +90,7 @@ class VariantHandler:
     def setProp(self, key, val):
         self.mProps[key] = val
 
-    def getRefBase(self):
+    def getBaseRef(self):
         return self.mRefBase
 
     @classmethod
