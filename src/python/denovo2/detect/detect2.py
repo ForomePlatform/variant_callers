@@ -32,7 +32,7 @@ def chrom2num(chrom_name):
         chrom_num = int(chrom_name)
         assert 0 <= chrom_num <= 22
     else:
-        chrom_num = {"M":0, "MT": 0, "X":23, "Y":24}.get(chrom_name, 25)
+        chrom_num = {"M": 0, "MT": 0, "X": 23, "Y": 24}.get(chrom_name, 25)
     assert chrom_num < 25, "Bad chromosome: " + chrom_name
     return chrom_num
 
@@ -44,10 +44,11 @@ def num2chrom(chrom_num):
 # Variant works
 #========================================
 class VariantHandler:
-    def __init__(self, chrom_name, pos, ref, alt, af, chrom_num = None):
+    def __init__(self, chrom_name, pos, ref, alt, af,
+            chrom_num = None, ref_base = None):
         if chrom_num is not None:
             assert chrom_name is None
-            chrom_name= "chr" + num2chrom(chrom_num)
+            chrom_name = "chr" + num2chrom(chrom_num)
         self.mChromName = chrom_name
         self.mChromNum = chrom2num(self.mChromName)
         self.mPos = int(pos)
@@ -55,6 +56,7 @@ class VariantHandler:
         self.mAlt = alt
         self.mAF = float(af)
         self.mProps = dict()
+        self.mRefBase = "hg19" if ref_base is None else ref_base
 
     # Attention: set level = 2 for keep only snip variants
     def isGood(self, level = 1):
@@ -88,6 +90,9 @@ class VariantHandler:
     def setProp(self, key, val):
         self.mProps[key] = val
 
+    def getRefBase(self):
+        return self.mRefBase
+
     @classmethod
     def parse(cls, line):
         params = line.strip().split()
@@ -116,9 +121,10 @@ class VariantHandler:
 #========================================
 class DenovoDetector:
     def __init__(self, unrelated_dir, trio_filename=None, trio_list=None,
-                 dump_filename=None, mdl_file=None):
-        self.mTrioSamFiles = PysamList(file_with_list_of_filenames=trio_filename,
-                                       list_of_bams=trio_list)
+            dump_filename=None, mdl_file=None):
+        self.mTrioSamFiles = PysamList(
+            file_with_list_of_filenames = trio_filename,
+            list_of_bams = trio_list)
         self.mUnrelLib = None
         self.mDumpFName = dump_filename
         if unrelated_dir is not None:
@@ -126,7 +132,7 @@ class DenovoDetector:
         else:
             assert self.mDumpFName is None
             self.mUnrelMdl = DeNovo_MDL_Reader(mdl_file)
-    
+
     def close(self):
         if self.mUnrelLib is not None:
             self.mUnrelLib.finishUp()
@@ -147,15 +153,15 @@ class DenovoDetector:
 def runner(outfilename, initial_filename, unrelated_dir, mdl_file,
         trio_filename, dump_filename):
     detector = DenovoDetector(unrelated_dir, trio_filename,
-                              dump_filename=dump_filename, mdl_file=mdl_file)
-            
+        dump_filename = dump_filename, mdl_file = mdl_file)
+
     variants = VariantHandler.loadFile(initial_filename)
 
     for count, variant in enumerate(variants):
         passed = detector.detect(variant)
         print("Variant", count, variant.getChromName(), variant.getPos(),
             "AF=", variant.getAF(), "passed=", passed)
-    
+
     detector.close()
 
     with open(outfilename, "w") as outp:
@@ -167,20 +173,21 @@ def runner(outfilename, initial_filename, unrelated_dir, mdl_file,
                 "%.05f" % variant.getProp("PP"),
                 "%.05f" % variant.getProp("AF_unrel")]), file = outp)
 
+
 #========================================
-if __name__=="__main__":
+if __name__ == "__main__":
     from argparse import ArgumentParser
     parser = ArgumentParser(
         description = "Detect DeNovo 2nd stage (high precision) algorithm")
     parser.add_argument("--output", "-O",
         help = "Output resulting file, required", required = True)
     parser.add_argument("--initial", "-I",
-        help = "Initial file with 1st stage result, required", 
+        help = "Initial file with 1st stage result, required",
         required = True)
     parser.add_argument("--unrelated", "-U",
         help = "Path to directory with libraries of unrelated, required")
     parser.add_argument("--trio", "-T",
-        help = "Path to file describing trio BAM-files, required", 
+        help = "Path to file describing trio BAM-files, required",
         required = True)
     parser.add_argument("--dump", "-D",
         help = "Tool for test original Anvoy code")
@@ -188,7 +195,7 @@ if __name__=="__main__":
         help = "AD-MDL index file, can be used instead of -U")
 
     args = parser.parse_args()
-    
+
     if (args.unrelated,  args.mdl) == (None,  None):
         print("Either -I or -U option is required")
 

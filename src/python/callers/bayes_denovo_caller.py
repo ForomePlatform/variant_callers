@@ -18,7 +18,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import Dict, Set, Tuple, List
+from typing import Dict, Set
 from vcf.model import _Record
 
 from callers.ab_caller import ABCaller
@@ -37,13 +37,15 @@ class BayesDenovoCaller(AbstractCaller):
         self.pp_threshold = pp_threshold
         self.detector = None
         self.return_parent_calls = include_parent_calls
+        self.base_ref = base_ref
 
     def init(self, family: Dict, samples: Set):
         super(BayesDenovoCaller, self).init(family, samples)
         self.parent.init(family, samples)
         trio = self.get_trio()
         if (not trio):
-            raiseException("For {} family must contain a trio".format(self.get_my_tag()))
+            raiseException(
+                "For {} family must contain a trio".format(self.get_my_tag()))
         list_of_bam_files = [
             self.path_to_bams.format(sample) for sample in trio
         ]
@@ -63,7 +65,8 @@ class BayesDenovoCaller(AbstractCaller):
         pos = record.POS
         genotypes = self.parent.get_genotypes(record)
         af = self.parent.get_af(genotypes)
-        variant = VariantHandler(chromosome, pos, record.REF, record.ALT, af)
+        variant = VariantHandler(chromosome, pos, record.REF, record.ALT, af,
+            base_ref = self.base_ref)
         passed = self.detector.detect(variant)
         if (passed):
             pp = variant.getProp("PP")

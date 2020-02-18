@@ -25,10 +25,11 @@ import numpy as np
 from typing import List
 
 from denovo2.adlib.ad_lib import AD_LibReader
+from .hg_conv import Hg19_38
 #========================================
 class PysamList:
-    def __init__(self, file_with_list_of_filenames:str=None,
-                 list_of_bams:List = None):
+    def __init__(self, file_with_list_of_filenames: str = None,
+            list_of_bams: List = None):
         self.mSamFiles = []
         if (file_with_list_of_filenames):
             list_of_bams = []
@@ -70,9 +71,18 @@ BQ_thresh = -100.
 
 #========================================
 def mineAD_ord(samfile, variant):
-    global MQ_thresh, BQ_thresh
-    position = variant.getPos() - 1
-    ADf, ADr = np.array([0.,0]), np.array([0., 0.])
+    global MQ_thresh, BQ_thresh, sLiftOverH
+
+    ADf, ADr = np.array([0., 0.]), np.array([0., 0.])
+    if variant.getBaseRef() == "hg38":
+        pos = Hg19_38.convertPos(
+            variant.getChromNum(), variant.getPos())
+        if pos is None:
+            return ADf, ADr
+        position = pos - 1
+    else:
+        position = variant.getPos() - 1
+
     for pileupcolumn in _pileup(samfile, variant.getChromNum(),
             position, position + 1):
         if pileupcolumn.pos != position:
@@ -83,10 +93,10 @@ def mineAD_ord(samfile, variant):
             q_pos = pileupread.query_position
             MQ = pileupread.alignment.mapping_quality
             BQ = pileupread.alignment.query_qualities[q_pos]
-            if MQ < MQ_thresh or BQ <BQ_thresh:
+            if MQ < MQ_thresh or BQ < BQ_thresh:
                 continue
-            if (variant.getRef().upper() ==
-                    pileupread.alignment.query_sequence[q_pos].upper()):
+            if (variant.getRef().upper()
+                    == pileupread.alignment.query_sequence[q_pos].upper()):
                 if pileupread.alignment.is_reverse:
                     ADr[0] += 1
                 else:
@@ -133,6 +143,4 @@ class AD_LibCollection:
                     indent = 4, sort_keys = True))
 
 #========================================
-
-
 
