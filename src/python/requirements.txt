@@ -4,3 +4,4 @@ pysam
 PyVCF
 six
 sortedcontainers
+pyliftover
