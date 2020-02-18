@@ -25,7 +25,7 @@ import numpy as np
 from typing import List
 
 from denovo2.adlib.ad_lib import AD_LibReader
-from .hg_conv import Hg19_38
+from denovo2.hg_conv import Hg19_38
 #========================================
 class PysamList:
     def __init__(self, file_with_list_of_filenames: str = None,
