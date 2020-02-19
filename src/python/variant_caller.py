@@ -43,7 +43,7 @@ def run (args):
                                           args.results,
                                           args.dnlib,
                                           include_parent_calls=not b,
-                                          base_ref=args.assembly)
+                                          assembly=args.assembly)
     else:
         denovo_caller = ABDenovoCaller()
 

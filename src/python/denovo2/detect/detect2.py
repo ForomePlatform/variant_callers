@@ -26,7 +26,7 @@ from .read_pysam import PysamList, AD_LibCollection
 # Chromosomes name/num
 #========================================
 def chrom2num(chrom_name):
-    if chrom_name.startswith("chr"):
+    if not chrom_name.isdigit() and chrom_name.startswith("chr"):
         chrom_name = chrom_name[3:]
     if chrom_name.isdigit():
         chrom_num = int(chrom_name)

@@ -29,9 +29,9 @@ from utils.misc import raiseException
 
 class BayesDenovoCaller(AbstractCaller):
     def __init__(self, parent: ABCaller,
-            path_to_bams: str, path_to_library: str,
-            pp_threshold: float = 0.7, include_parent_calls: bool = True,
-            base_ref = None):
+                 path_to_bams: str, path_to_library: str,
+                 pp_threshold: float = 0.7, include_parent_calls: bool = True,
+                 assembly = None):
         super().__init__()
         self.parent = parent
         self.path_to_bams = path_to_bams
@@ -39,7 +39,7 @@ class BayesDenovoCaller(AbstractCaller):
         self.pp_threshold = pp_threshold
         self.detector = None
         self.return_parent_calls = include_parent_calls
-        self.base_ref = base_ref
+        self.assembly = assembly
 
     def init(self, family: Dict, samples: Set):
         super(BayesDenovoCaller, self).init(family, samples)
@@ -68,7 +68,7 @@ class BayesDenovoCaller(AbstractCaller):
         genotypes = self.parent.get_genotypes(record)
         af = self.parent.get_af(genotypes)
         variant = VariantHandler(chromosome, pos, record.REF, record.ALT, af,
-            base_ref = self.base_ref)
+                                 base_ref = self.assembly)
         passed = self.detector.detect(variant)
         if (passed):
             pp = variant.getProp("PP")

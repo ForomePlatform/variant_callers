@@ -110,3 +110,6 @@ class ABCaller(AbstractCaller):
     def unaffected(self, genotypes: Dict):
         g = [genotypes[id] for id in self.unaffected_samples]
         return self.gt_to_int(g)
+
+    # @classmethod
+    # def liftover_38_to_19(cls):
