@@ -53,6 +53,8 @@ class PysamList:
                 return None, None
             ADfs.append(ADf)
             ADrs.append(ADr)
+        if len(ADfs) == 0:
+            return None, None
         return np.array(ADfs), np.array(ADrs)
 
 #========================================
@@ -136,6 +138,8 @@ class AD_LibCollection:
                 self.mDumpDict[key] = [
                     [[vec[0], vec[1]] for vec in ADfs],
                     [[vec[0], vec[1]] for vec in ADrs]]
+        if len(ADfs) == 0:
+            return None, None
         return np.array(ADfs), np.array(ADrs)
 
     def finishUp(self):
