@@ -74,6 +74,8 @@ def run (args):
 
     harness = Harness(vcf_file, family, callers, flush=flush,
                       start_pos=args.start, stop = args.stop)
+    if args.debug:
+        harness.debug_mode = True
     if args.execute:
         harness.write_header()
         t = harness.run()
@@ -120,6 +122,8 @@ if __name__ == '__main__':
             help="If start position is given then tells if to stop when reaches "
                  "the end of chromosome",
             required=False)
+    parser.add_argument("--debug", action="store_true",
+            help="Debug mode: detailed diagnostics", required=False)
     parser.add_argument("--output",
             help="Output file with new calls",
             required=False)

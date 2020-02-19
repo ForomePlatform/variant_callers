@@ -105,6 +105,7 @@ class Harness():
         self.variant_called = 0
         self.use_context = len(callers) > 1
         self.shared_context = None
+        self.debug_mode = False
 
     def update_calls(self, caller:AbstractCaller, all_calls: Dict, new_calls: Dict) -> None:
         if (caller.get_n() > 0):
@@ -189,8 +190,9 @@ class Harness():
                           format(self.variant_counter, self.call_counter))
             except Exception as e:
                 print("Error in {}: {}".format(record.CHROM, record.POS))
-                #print(str(e))
-                traceback.print_exc()
+                print(str(e))
+                if self.debug_mode:
+                    traceback.print_exc()
 
 
         if self.calls_file_open and len(self.calls) > 0:
