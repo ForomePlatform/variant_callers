@@ -21,6 +21,7 @@
 import os
 import shutil
 import time
+import traceback
 from collections import OrderedDict
 
 import sortedcontainers
@@ -188,8 +189,9 @@ class Harness():
                           format(self.variant_counter, self.call_counter))
             except Exception as e:
                 print("Error in {}: {}".format(record.CHROM, record.POS))
-                print(str(e))
-                raise e
+                #print(str(e))
+                traceback.print_exc()
+
 
         if self.calls_file_open and len(self.calls) > 0:
             self.flush_calls()

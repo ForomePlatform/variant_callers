@@ -28,6 +28,7 @@ class Hg19_38:
 
     @classmethod
     def prepareChrom(cls, chrom):
+        chrom = str(chrom)
         if chrom.startswith("chr"):
             return chrom
         chrom = str(chrom).upper()
