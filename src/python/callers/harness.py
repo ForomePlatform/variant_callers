@@ -189,6 +189,7 @@ class Harness():
             except Exception as e:
                 print("Error in {}: {}".format(record.CHROM, record.POS))
                 print(str(e))
+                raise e
 
         if self.calls_file_open and len(self.calls) > 0:
             self.flush_calls()
