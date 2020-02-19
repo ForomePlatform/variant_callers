@@ -49,6 +49,8 @@ class PysamList:
         ADfs, ADrs = [], []
         for samfile in self.mSamFiles:
             ADf, ADr = mineAD_ord(samfile, variant)
+            if ADf is None:
+                return None, None
             ADfs.append(ADf)
             ADrs.append(ADr)
         return np.array(ADfs), np.array(ADrs)
@@ -78,7 +80,7 @@ def mineAD_ord(samfile, variant):
         pos = Hg19_38.convertPos(
             variant.getChromNum(), variant.getPos())
         if pos is None:
-            return ADf, ADr
+            return None, None
         position = pos - 1
     else:
         position = variant.getPos() - 1

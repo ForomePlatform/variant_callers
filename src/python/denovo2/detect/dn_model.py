@@ -42,6 +42,12 @@ class DeNovo_Model:
             return
 
         ADfs, ADrs = trio_samfiles.mineAD(variant)
+        if ADfs is None:
+            variant.setProp("PASSED", False)
+            if self.sVerboseMode:
+                print ("Not passed by location problem")
+            return
+
         assert len(ADfs) == 3 and len(ADrs) == 3
 
         #PASS:if AF_unrel<0.01 and ALT_read_checker_in_parents(ADfs,ADrs):

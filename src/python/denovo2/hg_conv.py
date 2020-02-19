@@ -27,22 +27,13 @@ class Hg19_38:
     sChromMap = dict()
 
     @classmethod
-    def prepareChrom(cls, chrom):
-        chrom = str(chrom)
-        if chrom.startswith("chr"):
-            return chrom
-        chrom = str(chrom).upper()
-        chrom = {"0": "M", "23": "X", "24": "Y"}.get(chrom, chrom)
-        return "chr" + chrom
-
-    @classmethod
     def convertPos(cls, chrom, pos):
         if cls.sHandler is None:
             print("Initializing hg19 -> hg38 liftover conversion",
                 file = sys.stderr)
             cls.sHandler = LiftOver("hg19", "hg38")
         if chrom not in cls.sChromMap:
-            cls.sChromMap[chrom] = cls.prepareChrom(chrom)
+            cls.sChromMap[chrom] = normalizeChromName(chrom)
         try:
             coord  = cls.sHandler.convert_coordinate(cls.sChromMap[chrom], pos - 1)
         except Exception:
@@ -57,21 +48,13 @@ class Hg38_19:
     sChromMap = dict()
 
     @classmethod
-    def prepareChrom(cls, chrom):
-        if chrom.startswith("chr"):
-            return chrom
-        chrom = str(chrom).upper()
-        chrom = {"0": "M", "23": "X", "24": "Y"}.get(chrom, chrom)
-        return "chr" + chrom
-
-    @classmethod
     def convertPos(cls, chrom, pos):
         if cls.sHandler is None:
             print("Initializing hg38 -> hg19 liftover conversion",
                 file = sys.stderr)
             cls.sHandler = LiftOver("hg38", "hg19")
         if chrom not in cls.sChromMap:
-            cls.sChromMap[chrom] = cls.prepareChrom(chrom)
+            cls.sChromMap[chrom] = normalizeChromName(chrom)
         try:
             coord  = cls.sHandler.convert_coordinate(cls.sChromMap[chrom], pos - 1)
         except Exception:
@@ -79,3 +62,12 @@ class Hg38_19:
         if (len(coord) == 0):
             return None
         return coord[0][1] + 1
+
+#========================================
+def normalizeChromName(cls, chrom):
+    chrom = str(chrom)
+    if chrom.startswith("chr"):
+        return chrom
+    chrom = str(chrom).upper()
+    chrom = {"0": "M", "23": "X", "24": "Y"}.get(chrom, chrom)
+    return "chr" + chrom
