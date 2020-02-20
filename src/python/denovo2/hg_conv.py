@@ -64,7 +64,7 @@ class Hg38_19:
         return coord[0][1] + 1
 
 #========================================
-def normalizeChromName(cls, chrom):
+def normalizeChromName(chrom):
     chrom = str(chrom)
     if chrom.startswith("chr"):
         return chrom
