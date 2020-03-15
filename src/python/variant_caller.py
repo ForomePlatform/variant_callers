@@ -96,7 +96,10 @@ def run (args):
         harness.header_file = args.header
         tags = [t for t in Harness.read_header(args.header)]
     if args.apply:
-        harness.apply_calls("xx.vcf", tags)
+        if args.ovcf:
+            harness.apply_calls(args.ovcf, tags)
+        else:
+            harness.apply_calls("xx.vcf", tags)
 
     print("All Done")
 
@@ -129,6 +132,9 @@ if __name__ == '__main__':
             help="Debug mode: detailed diagnostics", required=False)
     parser.add_argument("--output",
             help="Output file with new calls",
+            required=False)
+    parser.add_argument("-o", "--out_vcf", "--ovcf",
+            help="Output file with new calls", dest= "ovcf",
             required=False)
     parser.add_argument("--assembly", default="hg19",
             help="Assembly to be used: hg19/hg38",

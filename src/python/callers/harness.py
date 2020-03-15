@@ -271,8 +271,13 @@ class Harness():
         execute("bgzip -f {}".format(self.calls_file))
         execute("tabix -s1 -b2 -e2 -f {}.gz".format(self.calls_file))
         columns = ','.join(["CHROM","POS"] + tags)
-        execute("bcftools annotate -a {}.gz -h {} -c {} -o {} {}".
-                  format(self.calls_file, self.header_file, columns, output_file, self.input_vcf))
+        if output_file.endswith("gz"):
+            pack = "-Oz --threads 2 "
+        else:
+            pack = ""
+        execute("bcftools annotate -a {}.gz -h {} -c {} -o {} {} {}".
+                  format(self.calls_file, self.header_file,
+                         columns, output_file, self.input_vcf, pack))
 
 
     @classmethod
