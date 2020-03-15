@@ -290,6 +290,9 @@ class Harness():
                     if xx[0] == "ID":
                         id = xx[1]
                     elif xx[0] == "Number":
-                        number = int(xx[1])
+                        if xx[1] in ['A', 'R', '.']:
+                            number = xx[1]
+                        else:
+                            number = int(xx[1])
                 metadata[id] = number
         return metadata

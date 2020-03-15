@@ -24,6 +24,7 @@ import sortedcontainers
 
 from utils.case_utils import get_trios_for_family
 
+
 @total_ordering
 class Pos:
     def __init__(self, chromosome, pos) -> None:
@@ -67,21 +68,30 @@ class TSVReader:
     def __init__(self, tsv_calls_file:str, format_string:str, samples:Collection) -> None:
         super().__init__()
         self.samples = samples
-        patterns = dict()
-        patterns.update({s:format_string.format(sample=s) for s in self.samples})
+        if format_string:
+            patterns = dict()
+            patterns.update({s:format_string.format(sample=s) for s in self.samples})
+        else:
+            patterns = None
         self.candidate_calls = sortedcontainers.SortedDict()
         with open(tsv_calls_file) as calls:
             for call in calls:
                 if call.startswith('#'):
                     continue
                 samples=set()
-                for sample in patterns:
-                    if patterns[sample] in call:
-                        samples.add(sample)
+                if patterns:
+                    for sample in patterns:
+                        if patterns[sample] in call:
+                            samples.add(sample)
+                    if not samples:
+                        continue
+
+                data = call.split()
+                key = Pos(data[0], int(data[1]))
                 if samples:
-                    data = call.split()
-                    key = Pos(data[0], int(data[1]))
                     self.candidate_calls[key] = samples
+                else:
+                    self.candidate_calls[key] = data[2:]
 
     def has_call(self, chromosome, pos):
         return Pos(chromosome, pos) in self.candidate_calls

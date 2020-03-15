@@ -26,14 +26,17 @@ from callers.ab_homo_rec_caller import ABHomozygousRecessiveCaller
 from callers.bayes_denovo_caller import BayesDenovoCaller
 from callers.harness import Harness, HEADER_FILE_NAME, CALLS_FILE_NAME
 from callers.tag_caller import TagCaller
-from utils.case_utils import parse_fam_file
+from utils.case_utils import parse_fam_file, parse_all_fam_files
 
 
 def run (args):
     vcf_file = args.vcf
     fam_file = args.family
 
-    family = parse_fam_file(fam_file)
+    if fam_file.endswith(".fam"):
+        family = parse_fam_file(fam_file)
+    else:
+        family = parse_all_fam_files(fam_file)
     b = args.callers and ("de-novo-b" in args.callers)
 
     need_standard_de_novo = (not args.callers) or ("de-novo" in args.callers) or b
@@ -148,7 +151,7 @@ if __name__ == '__main__':
             if args.output == CALLS_FILE_NAME:
                 args.header = HEADER_FILE_NAME
             else:
-                args.header = args.output + ".hdr"
+                args.header = args.output.replace(".tsv", "") + ".hdr"
     else:
         args.execute = True
 
